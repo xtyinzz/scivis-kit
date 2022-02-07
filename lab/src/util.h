@@ -2,6 +2,8 @@
 #define UTIL_H
 
 #include <vector>
+#include <string>
+#include <sstream>
 
 // product between vector elements
 template <typename T>
@@ -38,4 +40,15 @@ T trilerp(T v0, T v1, T v2, T v3, T v4, T v5, T v6, T v7,
         alpha*beta*gamma*v7;
   return p;
 }
+
+std::vector<std::string> strSplit(std::string s, char delim) {
+  std::vector<std::string> results;
+  std::stringstream ss(s);
+  std::string str;
+  while (getline(ss, str, delim)) {
+    results.push_back(str);
+  }
+  return results;
+}
+
 #endif

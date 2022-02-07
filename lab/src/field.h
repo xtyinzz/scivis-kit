@@ -31,6 +31,7 @@ class Field {
     // }
     
     Field(Grid *g): g(g) {}
+    Field(Solution<T> *s): g(s) {}
     Field(Grid *g, Solution<T> *s): g(g), s(s) {} 
 
     Grid *grid() { return this->g; }

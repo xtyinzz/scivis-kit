@@ -1,0 +1,60 @@
+requirements:
+  Windows 10 
+  gcc 8.1.0 (Built by MingGW-W64 project)
+  python 3.7
+
+Files:
+  // Task output data
+  data/sub/*
+
+  // implementation
+  src/grid.h
+  src/solution.h
+  src/field.h
+
+  // c++ testing program
+  src/taks*.h
+
+  // python netcdf writer
+  vis/raw2nc.ipynb
+
+  // data produced
+  data/sub/*
+
+Compilation:
+  cd to lab
+  mingw32-make
+
+task instructions:
+
+1a:
+  1. run ./task1a
+  2. run raw2nc.ipynb in directory vis/
+  3. execute 1st cell after imports with comment "task1a"
+  4. output file: data/sub/task1a.nc
+
+1b:
+  1. run ./task1b
+  2. output file: data/sub/task1_random_value.txt
+
+1c: 
+  1. run ./task1c
+  2. run raw2nc.ipynb in directory vis/
+  3. execute 2nd cell after imports with comment "task1c"
+  4. output file: data/sub/task1_plane_value.nc
+
+2a:
+  1. run ./task2a
+  2. run raw2nc.ipynb in directory vis/
+  3. execute 3rd cell after imports with comment "task2a"
+  4. output file: data/sub/task2a.nc
+
+2b:
+  1. run ./task2b
+  2. output file: data/sub/task2_random_value.txt
+
+2c: 
+  1. run ./task1c
+  2. run raw2nc.ipynb in directory vis/
+  3. execute 4th cell after imports with comment "task2c"
+  4. output file: data/sub/task2_plane_value.nc

@@ -78,9 +78,9 @@ class Grid {
     // Constructor 2: non-negative indexed regular cartesian grid of domain (0, dim-1)
     Grid(int xdim, int ydim, int zdim) {
       this->dims.reserve(3);
-      this->dims[0] = DimProperty(0, xdim, 1);
-      this->dims[1] = DimProperty(0, ydim, 1);
-      this->dims[2] = DimProperty(0, zdim, 1);
+      this->dims[0] = DimProperty(0, xdim-1, 1);
+      this->dims[1] = DimProperty(0, ydim-1, 1);
+      this->dims[2] = DimProperty(0, zdim-1, 1);
 
       vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
       ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);

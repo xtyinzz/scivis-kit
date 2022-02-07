@@ -35,7 +35,7 @@ int main() {
   float dx = (xmax-xmin)/299;
   float dy = (xmax-xmin)/299;
   float dz = (xmax-xmin)/299;
-  std::string fp = "data/task1a.raw";
+  std::string fp = "data/raw/task1a.raw";
 
   Grid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
   Solution<float> s(g.dimLength(0), g.dimLength(1), g.dimLength(2));
