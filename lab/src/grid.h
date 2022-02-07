@@ -109,8 +109,8 @@ class Grid {
       float whole;
       for (int i = 0; i < 3; i++) {
         float index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
-        indices[i] = floor(index);
-        weights[i] = std::modf(index, &whole);
+        indices[i] = int(index);
+        weights[i] = index - indices[i];
       }
       CellLerp cl = { indices, weights };
       return cl;

@@ -20,7 +20,6 @@ class Func1 {
 
 int main() {
   std::string pdata = "data/raw/resampled_256^3.raw";
-  std::string pout = "data/raw/task2a.raw";
   Solution<float> data(256, 256, 256);
   data.load(pdata);
   Grid g(256, 256, 256);
@@ -45,7 +44,7 @@ int main() {
     float x = std::stof(line[0]);
     float y = std::stof(line[1]);
     float z = std::stof(line[2]);
-    float val = field.val(x, y, z);
+    float val = field.val(z, y, x);
     std::cout << x <<' '<<y<<' '<<z<<' ' <<val << "\n";
     fval << val << std::endl;
   }

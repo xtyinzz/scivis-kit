@@ -15,7 +15,7 @@ T product(std::vector<T> vec) {
   return prod;
 }
 
-template <typename T>
+
 
 
   //
@@ -28,6 +28,7 @@ template <typename T>
   //		| /      | /
   //		|/_______|/
   //		0        1
+template <typename T>
 T trilerp(T v0, T v1, T v2, T v3, T v4, T v5, T v6, T v7,
           T alpha, T beta, T gamma) {
   T p = (1-alpha)*(1-beta)*(1-gamma)*v0 + 

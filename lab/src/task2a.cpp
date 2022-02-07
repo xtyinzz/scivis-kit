@@ -1,5 +1,8 @@
 // #include <grid.h>
 #include "field.h"
+
+#include <netcdf>
+
 #include <string>
 #include <cmath>
 #include <string>
@@ -20,8 +23,30 @@ class Func1 {
 
 int main() {
   std::string pdata = "data/raw/resampled_256^3.raw";
-  std::string pout = "data/raw/task2a.raw";
-  Solution<float> data(256, 256, 256);
-  data.load(pdata);
-  data.save(pout);
+  int dimLen = 256;
+  Solution<float> solution(dimLen, dimLen, dimLen);
+  solution.load(pdata);
+  for (int i = 0; i < 256; i++) {
+    for (int j = 0; j < 256; j++) {
+      for (int k = 0; k < 256; k++) {
+        float myval = solution.val(i, j, k);
+        float dval = solution.data[i*256*256+j*256+k];
+        if (myval != dval) std::cout << myval << " VS " << dval <<" at " << i <<"-"<<j<<"-"<<k<<"\n";
+      }
+    }
+  }
+  // data.save(pout);
+
+  std::string ncFileName = "data/sub/task2a.nc";
+
+  netCDF::NcFile dataFile(ncFileName.c_str(), netCDF::NcFile::replace);
+
+  auto xDim = dataFile.addDim("x", dimLen);
+  auto yDim = dataFile.addDim("y", dimLen);
+  auto zDim = dataFile.addDim("z", dimLen);
+  auto data = dataFile.addVar("val", netCDF::ncFloat, {xDim, yDim, zDim});
+
+  data.putVar(solution.data.data());
+  printf("*** SUCCESS writing file %s!\n", ncFileName.c_str());
+
 }

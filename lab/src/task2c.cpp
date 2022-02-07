@@ -1,5 +1,8 @@
 // #include <grid.h>
 #include "field.h"
+
+#include <netcdf>
+
 #include <string>
 #include <cmath>
 #include <string>
@@ -20,10 +23,10 @@ class Func1 {
 
 int main() {
   std::string pdata = "data/raw/resampled_256^3.raw";
-  Solution<float> data(256, 256, 256);
-  data.load(pdata);
+  Solution<float> solution(256, 256, 256);
+  solution.load(pdata);
   Grid g(256, 256, 256);
-  Field<float> field(&g, &data);
+  Field<float> field(&g, &solution);
   
 
   std::ifstream fpos("data/test/task2_plane.txt", std::ios::in);
@@ -33,20 +36,35 @@ int main() {
   std::vector<std::string> line = strSplit(s, ',');
 
   int xlen, ylen;
-  line = strSplit(s, ',');
   xlen = std::stoi(line[0]);
   ylen = std::stoi(line[1]);
 
-
-  std::ofstream fval("data/test/task2_plane_value.txt", std::ios::out);
+  // query the values
+  std::vector<float> vals(xlen*ylen, 0);
+  int i = 0;
   while (std::getline(fpos, s)) {
     line = strSplit(s, ',');
     float x = std::stof(line[0]);
     float y = std::stof(line[1]);
     float z = std::stof(line[2]);
-    float val = field.val(x, y, z);
-    fval << val << std::endl;
+    float val = field.val(z, y, x);
+    vals[i] = val;
+    i++;
   }
   fpos.close();
-  fval.close();
+
+  std::cout << i << " VS " << xlen*ylen << "\n";
+
+  // netCDF I/O
+  std::string ncFileName = "data/sub/task2_plane_value.nc";
+
+  netCDF::NcFile dataFile(ncFileName.c_str(), netCDF::NcFile::replace);
+
+  auto xDim = dataFile.addDim("x", xlen);
+  auto yDim = dataFile.addDim("y", ylen);
+  auto data = dataFile.addVar("val", netCDF::ncFloat, {xDim, yDim,});
+
+  data.putVar(vals.data());
+  printf("*** SUCCESS writing file %s!\n", ncFileName.c_str());
+
 }

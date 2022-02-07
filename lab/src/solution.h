@@ -16,16 +16,18 @@ class Solution {
     
     // update index strides. called when dimension is set.
     void updateStrides() {
-      int cumulated = 1;
+      size_t cumulated = 1;
+      unsigned long long i;
       // stride[-1] = 1
       // stride[k] = product(dims[k+1:])
-      for (int i=this->dims.size()-1; i >= 0; i--) {
+      for (i=this->dims.size()-1; i > 0; i--) {
         // std::cout << "bbbbbbb stride " << i << this->strides[i] << "\n";
         this->strides[i] = cumulated;
-        // std::cout << "bbbbbbb stride " << i << this->dims[i] << "\n";
+        // std::cout << "stride " << i  <<": "<< cumulated << "\n";
         cumulated *= this->dims[i];
-        // std::cout << "stride " << i << cumulated << "\n";
       }
+      this->strides[0] = cumulated;
+      // std::cout << "stride " << i << ": "<<cumulated << "\n";
     }
 
   public:
@@ -33,25 +35,27 @@ class Solution {
     int length;
     // int precision;
     std::vector<int> dims;
-    std::vector<int> strides;
+    std::vector<unsigned long long > strides;
     // ************************************************************************
     // constructor
     // default: init data to NULL
     Solution() {}
-    // read fpath into data;
+
+    // Construction 1: specify # of dims and then fill in the dimension length
     Solution(int numdims) {
       this->dims = std::vector<int>(numdims, 0);
-      this->strides = std::vector<int>(numdims, 0);
+      this->strides = std::vector<unsigned long long>(numdims, 0);
       this->length = 0;
     }
+    // Construction 2: specify the 3 dimensions' lengths
     Solution(int xdim, int ydim, int zdim) {
       this->dims = std::vector<int>(3, 0);
-      this->strides = std::vector<int>(3, 0);
+      this->strides = std::vector<unsigned long long>(3, 0);
 
       this->setDimLen(0, xdim);
       this->setDimLen(1, ydim);
       this->setDimLen(2, zdim);
-      this->initData();
+      // this->initData();
     }
     // ~Solution() { delete[] data; }
 
@@ -93,6 +97,7 @@ class Solution {
       fdata.close();
       std::cout << "Saved " << this->length << " of " << sizeof(T) << "-byte data to " << fpath << std::endl;
     }
+    
     auto castPrecision(float val);
     
 
@@ -159,6 +164,7 @@ class Solution {
       T v5 = this->val(xi+1, yi, zi+1);
       T v6 = this->val(xi, yi+1, zi+1);
       T v7 = this->val(xi+1, yi+1, zi+1);
+      // std::cout << "TRILERP: " << v0 << " " << v1<<" " <<v2<<" " <<v3<<" " <<v4<<" " <<v5<<" " <<v6<<" " <<v7<< "-" << alpha << " " << beta << " " << gamma << "\n";
       return trilerp(v0, v1, v2, v3, v4, v5, v6, v7, alpha, beta, gamma);
     }
 

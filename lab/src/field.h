@@ -60,6 +60,8 @@ class Field {
     // get value at location
     T val(float x, float y, float z) {
       CellLerp cl = this->g->getVoxelLerp(x, y, z);
+      // std::cout << "\n\n"<< cl.indices[0] <<"-"<<cl.indices[1]<<"-"<<cl.indices[2] <<"\n" << x << "-" << y << "-" << z << "\n";
+      // std::cout << cl.weights[0] <<"-"<<cl.weights[1]<<"-"<<cl.weights[2] << "\n";
       return this->s->val_trilerp(cl.indices[0], cl.indices[1], cl.indices[2],
                                   cl.weights[0], cl.weights[1], cl.weights[2]);
     }

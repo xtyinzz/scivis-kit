@@ -17,12 +17,34 @@ class Func1 {
     Func1(float a, float b): a(a), b(b) {}
     float eval(float x, float y, float z) {
       float t1 = x*x + ((1+b)*y)*((1+b)*y) + z*z - 1;
-      float t2 = x*x*z*z*z - a*y*y*z*z*z;
-      return t1*t1*t1 - t2;
+      float t2 = -x*x*z*z*z - a*y*y*z*z*z;
+      return t1*t1*t1 + t2;
     }
 };
 
+
 int main() {
+
+  // setup Field
+  int dimLen = 300;
+  float xmin = -1;
+  float xmax = 1;
+  float ymin = -1;
+  float ymax = 1;
+  float zmin = -1;
+  float zmax = 1;
+  float dx = (xmax - xmin) / (dimLen - 1);
+  float dy = (xmax - xmin) / (dimLen - 1);
+  float dz = (xmax - xmin) / (dimLen - 1);
+
+  Grid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
+  Solution<float> sol(g.dimLength(0), g.dimLength(1), g.dimLength(2));
+  sol.initData();
+
+  Field<float> f(&g, &sol);
+  std::cout << f.dimLength(0) << "---" << f.g->dimLength(0) << std::endl;
+
+  // fill in data
   std::ifstream fpos("data/test/task1_random.txt", std::ios::in);
   
   std::string s;
@@ -33,14 +55,32 @@ int main() {
   a = std::stof(line[0]);
   b = std::stof(line[1]);
 
-  std::ofstream fval("data/sub/task1_random_value.txt", std::ios::out);
   Func1 fn(a, b);
+  for (int i = 0; i < f.dimLength(0); i++)
+  {
+    for (int j = 0; j < f.dimLength(1); j++)
+    {
+      for (int k = 0; k < f.dimLength(2); k++)
+      {
+        float x = xmin + i * dx;
+        float y = ymin + j * dy;
+        float z = zmin + k * dz;
+        float val = fn.eval(x, y, z);
+        f.setVal(i, j, k, val);
+        // std::cout << i << " " << j << " " << k << " isEqual? " << (int) (val == f.val(x, y, z)) << '\n';
+      }
+    }
+  }
+  std::cout << "s length: " << f.s->length << " f length: " << f.dimLength(0) * f.dimLength(1) * f.dimLength(2) << '\n';
+
+  // evaluate and write data
+  std::ofstream fval("data/sub/task1_random_value.txt", std::ios::out);
   while (std::getline(fpos, s)) {
     line = strSplit(s, ',');
     float x = std::stof(line[0]);
     float y = std::stof(line[1]);
     float z = std::stof(line[2]);
-    float val = fn.eval(x, y, z);
+    float val = f.val(x, y, z);
     std::cout << x << ' ' << y << ' ' << z << ' ' << val << '\n';
     fval << val << std::endl;
   }
