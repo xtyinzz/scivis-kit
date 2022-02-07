@@ -2,6 +2,7 @@ requirements:
   Windows 10 
   gcc 8.1.0 (Built by MingGW-W64 project)
   python 3.7
+  Download the "resampled_256^3.raw" to data/raw/
 
 Files:
   // Task output data
