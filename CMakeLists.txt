@@ -7,7 +7,7 @@ project(scivis)
 
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 set (CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-O0 -ggdb")
+set(CMAKE_CXX_FLAGS "-O1")
 
 
 

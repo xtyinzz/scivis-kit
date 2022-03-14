@@ -24,18 +24,17 @@
 
 int main(int argc, char *argv[]) {
   TransferFunction tf;
-  tf.addRGBPoint(0, 0.,0.,0.);
-  tf.addRGBPoint(2000, 1., .7137, 0.75686); // light pink
-  tf.addRGBPoint(2500, 1., 0., 0.); // red
-  tf.addRGBPoint(3000, 0., 0.4, 0.); // dark green
-  tf.addRGBPoint(5000, .698, .133, .133); // firebrick
+  tf.addRGBPoint(0,    0.  ,    0.,      0.);
+  tf.addRGBPoint(2000,   1., .7137, 0.75686); // light pink
+  tf.addRGBPoint(2500,   1.,    0.,      0.); // red
+  tf.addRGBPoint(3000,   0.,   0.4,      0.); // dark green
+  tf.addRGBPoint(5000, .698,  .133,    .133); // firebrick
 
   glm::vec4 opacities(0.002, 0.002, 0.4, 0.8);
   int numSteps = std::atoi(argv[4]);
   if (numSteps >= 512) {
     opacities /= 2.;
   }
-
   tf.addOpacityPoint(0, 0.);
   tf.addOpacityPoint(2000, opacities[0]);
   tf.addOpacityPoint(2500, opacities[1]);
@@ -44,7 +43,7 @@ int main(int argc, char *argv[]) {
 
   VolumeRenderer vr;
 
-  std::string pdata = "../lab1/data/raw/resampled_256^3.raw";
+  std::string pdata = "data/raw/resampled_256^3.raw";
   Solution<float> solution(256, 256, 256);
   solution.load(pdata);
   Grid g(256, 256, 256);

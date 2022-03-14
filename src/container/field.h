@@ -112,7 +112,7 @@ class Field {
       this->grad = new Solution<glm::vec3>(
         this->getDimLen(0), this->getDimLen(1), this->getDimLen(2)
       );
-      std::cout << this->grad->getDimLen(0) << " " << this->grad->getDimLen(1) << " " << this->grad->getDimLen(2) << "\n";
+      // std::cout << this->grad->getDimLen(0) << " " << this->grad->getDimLen(1) << " " << this->grad->getDimLen(2) << "\n";
       #pragma omp parallel for collapse(3)
       for (int i = 0; i < this->getDimLen(0); i++) {
         for (int j = 0; j < this->getDimLen(1); j++) {
