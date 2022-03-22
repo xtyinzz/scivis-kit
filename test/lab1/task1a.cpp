@@ -28,7 +28,7 @@ class Func1 {
 
 int main()
 {
-  // setup Grid
+  // setup CartesianGrid
   int dimLen = 300;
   float xmin = -1;
   float xmax = 1;
@@ -40,7 +40,7 @@ int main()
   float dy = (xmax - xmin) / (dimLen - 1);
   float dz = (xmax - xmin) / (dimLen - 1);
 
-  Grid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
+  CartesianGrid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
   Solution<float> s(g.getDimLen(0), g.getDimLen(1), g.getDimLen(2));
   s.initData();
 

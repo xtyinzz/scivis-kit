@@ -1,7 +1,11 @@
 #ifndef FIELD_H
 #define FIELD_H
 
-#include "grid.h"
+// #include "grid.h"
+#include "grid_base.h"
+#include "grid_cartesian.h"
+// #include "grid_base.h"
+// #include "grid_base.h"
 #include "solution.h"
 #include "common.h"
 
@@ -13,9 +17,9 @@
 template <typename T=float>
 class Field {
   public:
-    // Grid *g = NULL;
+    // GridBase *g = NULL;
     // Solution<T> *s = NULL;
-    Grid *g = nullptr;
+    GridBase *g = nullptr;
     Solution<T>*s = nullptr;
     Solution<glm::vec3> *grad = nullptr;
 
@@ -26,7 +30,7 @@ class Field {
     // Field(float xmin, float xmax, float ymin,
     //       float ymax, float zmin, float zmax,
     //       float xspacing=1., float yspacing=1., float zspacing=1.) {
-    //   Grid gtmp(xmin, xmax, ymin, ymax, zmin, zmax, xspacing, yspacing, zspacing);
+    //   GridBase gtmp(xmin, xmax, ymin, ymax, zmin, zmax, xspacing, yspacing, zspacing);
     //   Solution<T> stmp(gtmp.dimLength(0), gtmp.dimLength(1), gtmp.dimLength(2));
     //   std::cout << gtmp.dimLength(0) << " " << gtmp.dimLength(1) << " " << gtmp.dimLength(2) << "\n";
 
@@ -34,23 +38,23 @@ class Field {
     //   this->s = &stmp;
     // }
     // Field(int xdim, int ydim, int zdim) {
-    //   Grid gtmp(xdim, ydim, zdim);
+    //   GridBase gtmp(xdim, ydim, zdim);
     //   Solution<T> stmp(gtmp.dimLength(0), gtmp.dimLength(1), gtmp.dimLength(2));
 
     //   this->g = &gtmp;
     //   this->s = &stmp;
     // }
     
-    Field(Grid *g): g(g) {}
+    Field(GridBase *g): g(g) {}
     Field(Solution<T> *s): g(s) {}
-    Field(Grid *g, Solution<T> *s): g(g), s(s) {} 
+    Field(GridBase *g, Solution<T> *s): g(g), s(s) {} 
     ~Field() { 
       delete this->grad;
      }
 
-    Grid *grid() { return this->g; }
+    GridBase *grid() { return this->g; }
     Solution<T> *solution() { return this->s; }
-    void setGrid(Grid *g) { this->g = g; }
+    void setGrid(GridBase *g) { this->g = g; }
     void setSolution(Solution<T> *s) { this->s = s; }
     void setGradSolution(Solution<glm::vec3> *grad) { this->grad = grad; }
 

@@ -1,7 +1,9 @@
-#ifndef GRID_H
-#define GRID_H
+#ifndef GRID_CURVILINEAR_H
+#define GRID_CURVILINEAR_H
 
 #include "common.h"
+#include "grid_base.h"
+#include "grid_rectlinear.h"
 #include <assert.h>
 #include <iostream>
 #include <string>
@@ -35,58 +37,41 @@ struct CellLerp {
 //     }
 // }
 
-class DimProperty {
+class DimPropertyCurvilinear: public DimPropertyBase {
   public:
     // double EPS = 1e-8;
-    double min, max;
-    double spacing;
-    int len;
+    std::vector<double> phys;
     // int order;
     // int stride;
-    DimProperty() {}
-    DimProperty(double min, double max, double spacing): min(min), max(max),
-                                                      spacing(spacing) {
-      // make sure grid resolution is integer
-      double tmp = (max-min) / spacing;
-      // std::cout << min << " and " << max << " and " << spacing << " and " << tmp << "\n";
-      // due to numerical issue, int check would work (e.g. 2 / (2. / 255.) != 255)
-      // std::cout << int(tmp) << " and " << static_cast<int>(tmp) << " and " << std::round(tmp) << " and " << (tmp - std::round(tmp) == 0) << "\n";
-      // std::cout << std::fabs(tmp - std::round(tmp)) << "\n";
-      // assert(std::fabs(tmp - std::round(tmp)) < EPS);
-      this->len = std::round(tmp) + 1;
+    DimPropertyCurvilinear() {}
+    DimPropertyCurvilinear(std::vector<double> coords): phys(coords) {
+      this->min = this->phys[0];
+      this->max = this->phys.back();
+      this->len = this->phys.size();
     }
 };
 
 // template <typename T>
-class Grid {
+class CurvilinearGrid: public GridBase {
   private:
 
   public:
-    std::string gtype = "Regular Cartesian";
-    std::vector<DimProperty> dims;
+    std::string gtype = "Curvilinear";
+    std::vector<DimPropertyCurvilinear> dims;
+    
+
     // cell count, vertex count
     int ccount, vcount;
 
     // xyzorder: order of axis. Ex: 
-    Grid() {}
-    // Constructor 1: specific dim min max spacing
-    Grid(double xmin, double xmax, double ymin,
-         double ymax, double zmin, double zmax,
-         double xspacing=1., double yspacing=1., double zspacing=1.) {
-      this->dims.reserve(3);
-      this->dims[0] = DimProperty(xmin, xmax, xspacing);
-      this->dims[1] = DimProperty(ymin, ymax, yspacing);
-      this->dims[2] = DimProperty(zmin, zmax, zspacing);
+    CurvilinearGrid() {}
 
-      vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
-      ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
-    }
     // Constructor 2: non-negative indexed regular cartesian grid of domain (0, dim-1)
-    Grid(int xdim, int ydim, int zdim) {
+    CurvilinearGrid(std::vector<double> *xCoords, std::vector<double> *yCoords, std::vector<double> *zCoords) {
       this->dims.reserve(3);
-      this->dims[0] = DimProperty(0, xdim-1, 1);
-      this->dims[1] = DimProperty(0, ydim-1, 1);
-      this->dims[2] = DimProperty(0, zdim-1, 1);
+      this->dims[0] = DimPropertyCurvilinear(*xCoords);
+      this->dims[1] = DimPropertyCurvilinear(*yCoords);
+      this->dims[2] = DimPropertyCurvilinear(*zCoords);
 
       vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
       ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
@@ -101,7 +86,7 @@ class Grid {
     }
 
     int getDimLen(int idim) { return this->dims[idim].len; }
-    double getDimSpacing(int idim) { return this->dims[idim].spacing; }
+    void setDimCoord(int idim, std::vector<double> *coords) { this->dims[idim].phys = *coords; }
 
     // ************************************************************************
     // core functions
@@ -110,17 +95,17 @@ class Grid {
     CellLerp getVoxelLerp(double x, double y, double z) {
       assert(this->isBounded(x,y,z));
 
-      std::vector<int> indices(3, 0);
+      std::vector<int> indices = this->getVoxel(x, y, z);
       std::vector<double> weights(3, 0);
       std::vector<double> location{ x, y, z };
       double whole;
       for (int i = 0; i < 3; i++) {
-        double index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
-        indices[i] = int(index);
-        weights[i] = index - indices[i];
+
       }
       CellLerp cl = { indices, weights };
       return cl;
+
+      // 1. find comp
     }
 
 
@@ -128,9 +113,21 @@ class Grid {
     std::vector<int> getVoxel(double x, double y, double z) {
       std::vector<int> indices(3, 0);
       std::vector<double> location{ x, y, z };
-      for (int i = 0; i < 3; i++) {
-        double index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
-        indices[i] = floor(index);
+      // for each dimension
+      for (int i = 0; i < this->dims.size(); i++) {
+        // search for the index along this dimension
+        DimPropertyCurvilinear *dim = &this->dims[i];
+        //
+        if (dim->phys[0] == location[i]) {
+          indices[i] = 0;
+          continue;
+        }
+        for (int j = 1; j < dim->len; j++) {
+          if (dim->phys[j-1] > location[i] && dim->phys[j] <= location[i]) {
+            indices[i] = j-1;
+            continue;
+          }
+        }
       }
       return indices;
     }

@@ -83,6 +83,8 @@ T trilerp(T v0, T v1, T v2, T v3, T v4, T v5, T v6, T v7,
         alpha*beta*gamma*v7;
   return p;
 }
+// template <typename T>
+
 
 std::vector<std::string> strSplit(std::string s, char delim) {
   std::vector<std::string> results;

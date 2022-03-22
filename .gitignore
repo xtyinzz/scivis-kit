@@ -1,2 +1,7 @@
-build/
+# scivis
+/data/
+/build/
 tmp/
+*.zip
+*.tar*
+

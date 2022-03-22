@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
   float dy = (xmax - xmin) / (dimLen - 1);
   float dz = (xmax - xmin) / (dimLen - 1);
 
-  Grid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
+  CartesianGrid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
   Solution<float> dummyS;
   HeartEquation<float> fieldHE(1.f, 1.f);
   fieldHE.setGrid(&g);

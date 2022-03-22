@@ -35,7 +35,7 @@ int main() {
   float dy = (xmax - xmin) / (dimLen - 1);
   float dz = (xmax - xmin) / (dimLen - 1);
 
-  Grid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
+  CartesianGrid g(xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz);
   Solution<float> sol(g.getDimLen(0), g.getDimLen(1), g.getDimLen(2));
   sol.initData();
 

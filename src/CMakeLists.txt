@@ -15,10 +15,11 @@ endforeach(dir)
 # include_directories(.)
 # target_sources(scivis PRIVATE ${SRC_FILES})
 add_library(scivis SHARED ${SRC_FILES} ${HEADER_FILES})
+set_target_properties(scivis PROPERTIES LINKER_LANGUAGE CXX)
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(scivis PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(scivis PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
 # target_link_libraries(scivis INTERFACE ${SRC_DIRS})

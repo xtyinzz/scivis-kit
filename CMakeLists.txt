@@ -1,12 +1,19 @@
+
 cmake_minimum_required(VERSION 3.2)
 
 # Set the project name
 project(scivis)
-# set(SRC_DIR src)
-# file(GLOB SRC ${SRC_DIR}/task*.cpp)
-
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
-set (CMAKE_CXX_STANDARD 17)
+
+# if(CMAKE_CXX_COMPILER_LOADED)
+#      message(STATUS "Compiler path: ${CMAKE_CXX_COMPILER}")
+#      message(STATUS "Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+#      message(STATUS "Compiler version:    
+#              ${CMAKE_CXX_COMPILER_VERSION}")
+#      message(STATUS "Compiler is part of GCC: 
+#              ${CMAKE_COMPILER_IS_GNUCXX}")
+# endif()
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-O1")
 
 

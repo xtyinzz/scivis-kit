@@ -25,7 +25,7 @@ int main() {
   std::string pdata = "data/raw/resampled_256^3.raw";
   Solution<float> solution(256, 256, 256);
   solution.load(pdata);
-  Grid g(256, 256, 256);
+  CartesianGrid g(256, 256, 256);
   Field<float> field(&g, &solution);
   
 
