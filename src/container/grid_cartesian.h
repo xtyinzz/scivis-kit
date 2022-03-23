@@ -42,7 +42,8 @@ class CartesianGrid: public GridBase {
     std::string gtype = "Regular Cartesian";
     std::vector<DimPropertyCartesian> dims;
     // cell count, vertex count
-    int ccount, vcount;
+    int ccount = 0;
+    int vcount = 0;
 
     // xyzorder: order of axis. Ex: 
     CartesianGrid() {}
@@ -50,7 +51,7 @@ class CartesianGrid: public GridBase {
     CartesianGrid(double xmin, double xmax, double ymin,
          double ymax, double zmin, double zmax,
          double xspacing=1., double yspacing=1., double zspacing=1.) {
-      this->dims.reserve(3);
+      this->dims.resize(3);
       this->dims[0] = DimPropertyCartesian(xmin, xmax, xspacing);
       this->dims[1] = DimPropertyCartesian(ymin, ymax, yspacing);
       this->dims[2] = DimPropertyCartesian(zmin, zmax, zspacing);
@@ -60,7 +61,7 @@ class CartesianGrid: public GridBase {
     }
     // Constructor 2: non-negative indexed regular cartesian grid of domain (0, dim-1)
     CartesianGrid(int xdim, int ydim, int zdim) {
-      this->dims.reserve(3);
+      this->dims.resize(3);
       this->dims[0] = DimPropertyCartesian(0, xdim-1, 1);
       this->dims[1] = DimPropertyCartesian(0, ydim-1, 1);
       this->dims[2] = DimPropertyCartesian(0, zdim-1, 1);

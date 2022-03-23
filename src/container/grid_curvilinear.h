@@ -37,18 +37,14 @@ struct CellLerp {
 //     }
 // }
 
-class DimPropertyCurvilinear: public DimPropertyBase {
+class DimPropertyCurvilinear: public DimPropertyRectlinear {
   public:
     // double EPS = 1e-8;
-    std::vector<double> phys;
+    // std::vector<double> comp;
     // int order;
     // int stride;
     DimPropertyCurvilinear() {}
-    DimPropertyCurvilinear(std::vector<double> coords): phys(coords) {
-      this->min = this->phys[0];
-      this->max = this->phys.back();
-      this->len = this->phys.size();
-    }
+    DimPropertyCurvilinear(std::vector<double> coords): DimPropertyRectlinear(coords) { }
 };
 
 // template <typename T>
@@ -58,23 +54,33 @@ class CurvilinearGrid: public GridBase {
   public:
     std::string gtype = "Curvilinear";
     std::vector<DimPropertyCurvilinear> dims;
+    RectlinearGrid *compGrid;
     
 
     // cell count, vertex count
-    int ccount, vcount;
+    int ccount = 0;
+    int vcount = 0;
 
     // xyzorder: order of axis. Ex: 
     CurvilinearGrid() {}
-
+    CurvilinearGrid(int numDims) {
+      this->dims.resize(numDims);
+    }
     // Constructor 2: non-negative indexed regular cartesian grid of domain (0, dim-1)
     CurvilinearGrid(std::vector<double> *xCoords, std::vector<double> *yCoords, std::vector<double> *zCoords) {
-      this->dims.reserve(3);
+      this->dims.resize(3);
       this->dims[0] = DimPropertyCurvilinear(*xCoords);
       this->dims[1] = DimPropertyCurvilinear(*yCoords);
       this->dims[2] = DimPropertyCurvilinear(*zCoords);
 
       vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
       ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
+    }
+
+        // TODO
+    void updateCounts() {
+      // vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
+      // ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
     }
 
     int getCellCount() { return this->ccount; }
@@ -86,16 +92,56 @@ class CurvilinearGrid: public GridBase {
     }
 
     int getDimLen(int idim) { return this->dims[idim].len; }
-    void setDimCoord(int idim, std::vector<double> *coords) { this->dims[idim].phys = *coords; }
+    void setPhys(int idim, std::vector<double> *coords) {
+      this->dims[idim].setPhys(*coords);
+      this->updateCounts();
+    }
+    void setPhys(std::vector<double> *xcoords, std::vector<double> *ycoords) {
+      this->dims[0].setPhys(*xcoords);
+      this->dims[1].setPhys(*ycoords);
+      this->updateCounts();
+    }
+    void setPhys(std::vector<double> *xcoords, std::vector<double> *ycoords, std::vector<double> *zcoords) {
+      this->dims[0].setPhys(*xcoords);
+      this->dims[1].setPhys(*ycoords);
+      this->dims[2].setPhys(*zcoords);
+      this->updateCounts();
+    }
+
+    void setCompGrid(RectlinearGrid *compGrid) {
+      this->compGrid = compGrid;
+    }
+
 
     // ************************************************************************
     // core functions
 
     // return floor corner x,y,z index and lerp weights on x,y,z
-    CellLerp getVoxelLerp(double x, double y, double z) {
+    // Given phys coord, output cell indices and comp space lerp weights by Newton's Method
+    CellLerp getVoxelLerp(double x, double y, double z, double tol=1.48e-8, int maxiter=50, double rtol=0.0) {
       assert(this->isBounded(x,y,z));
 
       std::vector<int> indices = this->getVoxel(x, y, z);
+      std::vector<Array3d> compVoxelCoord = this->compGrid->getVoxelCoords(x, y, z);
+      Array3d lowVtx = compVoxelCoord[0];
+      Array3d highVtx = compVoxelCoord[1];
+      Array3d phys{ x, y, z };
+
+      // newton's method
+      Array3d init_comp = (lowVtx + highVtx) / 2.;
+      Array3d comp = init_comp;
+      Array3d goal_diff{0., 0., 0.};
+      for(int i = 0; i < maxiter; i++) {
+        std::vector<Array3d> coeff = trilerpSysEqCoeff(comp, lowVtx, highVtx, compVoxelCoord);
+        Array3d phys_est = trilerpSysEq(comp[0], comp[1], comp[2], coeff);
+        Matrix3Xd diff_funcval = phys_est - phys;
+
+        Matrix3d jac_inv = this->getJacInvComp2Phys(comp, coeff);
+        Array3d new_comp = comp - (jac_inv * diff_funcval).array();
+      }
+
+      
+
       std::vector<double> weights(3, 0);
       std::vector<double> location{ x, y, z };
       double whole;
@@ -104,10 +150,53 @@ class CurvilinearGrid: public GridBase {
       }
       CellLerp cl = { indices, weights };
       return cl;
-
       // 1. find comp
     }
 
+    Matrix3d getJacComp2Phys(Array3d comp, std::vector<Array3d> coeff) {
+      return Matrix3d {
+        {
+          coeff[1][0] + coeff[4][0]*comp[1] + coeff[5][0]*comp[2] + coeff[7][0]*comp[1]*comp[2],
+          coeff[2][0] + coeff[4][0]*comp[0] + coeff[6][0]*comp[2] + coeff[7][0]*comp[0]*comp[2],
+          coeff[3][0] + coeff[5][0]*comp[0] + coeff[6][0]*comp[1] + coeff[7][0]*comp[0]*comp[1],
+        },
+        {
+          coeff[1][1] + coeff[4][1]*comp[1] + coeff[5][1]*comp[2] + coeff[7][1]*comp[1]*comp[2],
+          coeff[2][1] + coeff[4][1]*comp[0] + coeff[6][1]*comp[2] + coeff[7][1]*comp[0]*comp[2],
+          coeff[3][1] + coeff[5][1]*comp[0] + coeff[6][1]*comp[1] + coeff[7][1]*comp[0]*comp[1],
+        },
+        {
+          coeff[1][2] + coeff[4][2]*comp[1] + coeff[5][2]*comp[2] + coeff[7][2]*comp[1]*comp[2],
+          coeff[2][2] + coeff[4][2]*comp[0] + coeff[6][2]*comp[2] + coeff[7][2]*comp[0]*comp[2],
+          coeff[3][2] + coeff[5][2]*comp[0] + coeff[6][2]*comp[1] + coeff[7][2]*comp[0]*comp[1],
+        }
+      };
+    }
+
+    Matrix3d getJacInvComp2Phys(Array3d comp, std::vector<Array3d> coeff) {
+      Matrix3d jac = this->getJacComp2Phys(comp, coeff);
+      double det = (-jac[0,0]*jac[1,1]*jac[2,2] - jac[0,1]*jac[1,2]*jac[2,0] - jac[0,2]*jac[1,0]*jac[2,1] + 
+                    jac[0,2]*jac[1,1]*jac[2,0] + jac[0,1]*jac[1,0]*jac[2,2] + jac[0,0]*jac[1,2]*jac[2,1]);
+
+      Matrix3d inv {
+        {
+          jac[1,1]*jac[2,2] - jac[1,2]*jac[2,1],
+          -jac[0,1]*jac[2,2] + jac[0,2]*jac[2,1],
+          jac[0,1]*jac[1,2] - jac[0,2]*jac[1,1],
+        },
+        {
+          -jac[1,0]*jac[2,2] + jac[1,2]*jac[2,0],
+          jac[0,0]*jac[2,2] - jac[0,2]*jac[2,0],
+          -jac[0,0]*jac[1,2] + jac[0,2]*jac[1,0],
+        },
+        {
+          jac[1,0]*jac[2,1] - jac[1,1]*jac[2,0],
+          jac[0,0]*jac[2,1] - jac[0,1]*jac[2,0],
+          jac[0,0]*jac[1,1] - jac[0,1]*jac[1,0],
+        }
+      };
+      return inv / det;
+    }
 
     // return corner Cell: corner x,y,z grid point index
     std::vector<int> getVoxel(double x, double y, double z) {
