@@ -14,18 +14,22 @@ project(scivis)
 #              ${CMAKE_COMPILER_IS_GNUCXX}")
 # endif()
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-O1")
+# set(CMAKE_CXX_FLAGS "-O1")
 
 
 
 # add_library(Boost INTERFACE)
 # target_include_directories(Boost INTERFACE "/usr/include")
 
-# add_library(Eigen INTERFACE)
-# target_include_directories(Eigen INTERFACE "/usr/include")
+add_library(Eigen INTERFACE)
+target_include_directories(Eigen INTERFACE "${PROJECT_SOURCE_DIR}/include")
+add_library(GLM INTERFACE)
+target_include_directories(GLM INTERFACE "${PROJECT_SOURCE_DIR}/include")
+add_library(STB INTERFACE)
+target_include_directories(STB INTERFACE "${PROJECT_SOURCE_DIR}/include")
 
-# add_library(LINK_LIBS INTERFACE)
-# target_link_libraries(LINK_LIBS INTERFACE Boost Eigen)
+add_library(LINK_HEADER_LIBS INTERFACE)
+target_link_libraries(LINK_HEADER_LIBS INTERFACE Eigen GLM STB)
 
 
 

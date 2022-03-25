@@ -1,7 +1,8 @@
 // #include "container/field.h"
 #include "renderer/PieceWiseFunction.h"
 #include "renderer/TransferFunction.h"
-#include "common.h"
+#include "common/util.h"
+
 #include <glm/glm.hpp>
 
 #include <string>

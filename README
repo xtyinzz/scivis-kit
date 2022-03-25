@@ -1,19 +1,9 @@
-environment:
+Development Environment:
   Ubuntu 20.04.3 LTS
   gcc 9.4.0
   cmake >= 3.2
   OpenMP
-
-  Additional Requirement for tests:
-    lab1 (Container IO):
-      netcdf
-        - installed in root (i.e. /usr) by "sudo apt-get install libnetcdf-dev" in Ubuntu
-      netcdf_cxx4
-        - installed in root (i.e. /usr) by "sudo apt-get install libnetcdf-c++4-dev" in Ubuntu
-
-    lab2 (Renderer):
-      none
-
+  NetCDF
 
 Build Instruction:
   mkdir build
@@ -23,60 +13,3 @@ Build Instruction:
 
 Running Tests/Labs:
   Note: please find lab specific written materials in the test folder.
-
-
-  lab1:
-    cd test/lab1/
-    mkdir data/raw data/sub data/test
-
-    // cp task1_plane.txt, task1_random.txt, task2_plane.txt, text2_random.txt to data/test/
-    // cp resampled_256^3.raw to data/raw/
-
-    bin/task1a
-    bin/task1b
-    bin/task1c
-    bin/task2a
-    bin/task2b
-    bin/task2c
-
-    // find resulting data in data/sub/
-
-  lab2:
-    // IMPORTANT NOTE: If encounters Segmentation Fault, might be the threads in OpenMP didn't get enough stack size.
-    //                 Try unlock the thread stack size limit by command "ulimit -s unlimited.
-
-    cd test/lab2/
-    mkdir data/raw
-    // cp resampled_256^3.raw to data/raw
-
-    bash run.sh
-
-    // find resulting image in img/
-    //    image naming: {NAME}_{PLANE}_{SIZE}^2_{STEPS}of{STEPSIZE}step{SHADING}.png
-    //      {NAME}: lab1=heart, lab2=vr
-    //      {PLANE}: 0=X, 1=Y, 2=Z (i.e. 01=XY plane)
-    //      {SIZE}: length of one dimension of squared image
-    //      {STEPS}: Number of steps for a ray/pixel
-    //      {STEPSIZE}: step length of a ray.
-    //          lab1: 4/{SIZE}
-    //          lab2: (Spacing of Depth dimension) / 2.5 (i.e. if image in XY plane, {STEPSIZE} = (Z plane spacing) / 2.5 ).
-    //                Intuition is at least 2 samples per voxel.
-    //      {SHADING} = "_PHONG" if used. empty string "" if not used.
-
-
-    Performance Estimation:
-      Running with OpenMP on low-power CPU i5-8250U,
-      estimated running time for each image is shown below.
-
-      task1:
-                    50x50        200x200
-      NO SHADING     <0.1s        <1s
-      PHONG          <0.1s        <2s
-
-      task2:
-                    256x256        512x512
-      NO SHADING     1.5s             10s
-      PHONG          2.5s             25m
-
-
-If any issues arise, please let me know. Thank you!

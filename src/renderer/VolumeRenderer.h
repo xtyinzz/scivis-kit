@@ -1,5 +1,5 @@
-#ifndef VOLUMERENDERER_H
-#define VOLUMERENDERER_H
+#ifndef SVK_RENDERER_VOLUMERENDERER_H
+#define SVK_RENDERER_VOLUMERENDERER_H
 
 #include "VolumeRenderer.h"
 #include "TransferFunction.h"

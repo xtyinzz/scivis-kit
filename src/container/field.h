@@ -1,5 +1,5 @@
-#ifndef FIELD_H
-#define FIELD_H
+#ifndef SVK_CONTAINER_FIELD_H
+#define SVK_CONTAINER_FIELD_H
 
 // #include "grid.h"
 #include "grid_base.h"
@@ -7,7 +7,7 @@
 // #include "grid_base.h"
 // #include "grid_base.h"
 #include "solution.h"
-#include "common.h"
+
 
 #include <glm/glm.hpp>
 // #include <Eigen/Dense>
@@ -60,7 +60,7 @@ class Field {
 
 
     // get extents
-    std::vector<double> getDimExtent(int idim) {
+    std::vector<float> getDimExtent(int idim) {
       return this->g->getDomain(idim);
     }
     int getDimLen(int idim) {
