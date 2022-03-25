@@ -2,6 +2,7 @@ set (SRC_DIRS
   .
   container
   renderer
+  common
 )
 
 foreach (dir ${SRC_DIRS})
@@ -17,10 +18,17 @@ endforeach(dir)
 add_library(scivis SHARED ${SRC_FILES} ${HEADER_FILES})
 set_target_properties(scivis PROPERTIES LINKER_LANGUAGE CXX)
 
+# Link header-only libraries collected root CMakeLists
+target_link_libraries(scivis INTERFACE ${LINK_HEADER_LIBS})
+
+
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(scivis PRIVATE OpenMP::OpenMP_CXX)
 endif()
+
+target_include_directories(scivis PUBLIC "$ENV{NETCDF}/include")
+target_link_libraries(scivis PUBLIC $ENV{NETCDF_LIBS})
 
 # target_link_libraries(scivis INTERFACE ${SRC_DIRS})
 # target_include_directories(scivis INTERFACE ${SRC_DIRS})

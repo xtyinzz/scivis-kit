@@ -1,9 +1,7 @@
-#ifndef GRID_RECTLINEAR_H
-#define GRID_RECTLINEAR_H
+#ifndef SVK_CONTRAINER_GRID_RECTLINEAR_H
+#define SVK_CONTRAINER_GRID_RECTLINEAR_H
 
-#include "common.h"
 #include "grid_base.h"
-#include "grid_rectlinear.h"
 #include <assert.h>
 #include <iostream>
 #include <string>
@@ -12,37 +10,20 @@
 #include <vector>
 #include <Eigen/Dense>
 
-// class Cell {
-//   public:
-//     int xi, yi, zi;
-//     double alpha, beta, gamma;
-
-//     Cell() {}
-//     Cell(int xi, int yi, int zi): xi(xi), yi(yi), zi(zi) {}
-
-//     void calcLerpWeights(double x, double y, double z) {
-//       this->alpha = (x - this->xi) / this->x.spacing;
-//       this->beta = (y - this->yi) / this->y.spacing;
-//       this->gamma = (z - this->zi) / this->z.spacing;
-//     }
-// }
-
 using namespace Eigen;
 
 class DimPropertyRectlinear: public DimPropertyBase {
   public:
-    // double EPS = 1e-8;
-    std::vector<double> phys;
-    // int order;
-    // int stride;
+    std::vector<float> phys;
+
     DimPropertyRectlinear() {}
-    DimPropertyRectlinear(std::vector<double> coords): phys(coords) {
+    DimPropertyRectlinear(std::vector<float> coords): phys(coords) {
       this->updateProperty();
     }
-    double getPhys(int index) {
+    inline float getPhys(int index) {
       return this->phys[index];
     }
-    void setPhys(std::vector<double> coords) {
+    void setPhys(std::vector<float> coords) {
       this->phys = coords;
       this->updateProperty();
     }
@@ -55,28 +36,21 @@ class DimPropertyRectlinear: public DimPropertyBase {
     }
 };
 
-// template <typename T>
+
 class RectlinearGrid: public GridBase {
   private:
 
   public:
-    std::string gtype = "Rectlinear";
+    std::string gtype;
     std::vector<DimPropertyRectlinear> dims;
-    
-
-    // cell count, vertex count
     int ccount = 0;
     int vcount = 0;
 
-    // xyzorder: order of axis. Ex: 
     RectlinearGrid() {}
-
     RectlinearGrid(int numDims) {
       this->dims.resize(numDims);
     }
-
-    // Constructor 2: non-negative indexed regular cartesian grid of domain (0, dim-1)
-    RectlinearGrid(std::vector<double> *xCoords, std::vector<double> *yCoords, std::vector<double> *zCoords) {
+    RectlinearGrid(std::vector<float> *xCoords, std::vector<float> *yCoords, std::vector<float> *zCoords) {
       this->dims.resize(3);
       this->dims[0] = DimPropertyRectlinear(*xCoords);
       this->dims[1] = DimPropertyRectlinear(*yCoords);
@@ -97,21 +71,23 @@ class RectlinearGrid: public GridBase {
     int getVtxCount() { return this->vcount; }
     int getDimCount() { return this->dims.size(); } // what's return "dimensions of the grid" in hw write-up?
 
-    std::vector<double> getDomain(int idim) {
-      return {this->dims[idim].min, this->dims[idim].max};
+    std::vector<float> getDomain(int idim) {
+      return { this->dims[idim].min, this->dims[idim].max };
     }
 
     int getDimLen(int idim) { return this->dims[idim].len; }
-    void setPhys(int idim, std::vector<double> *coords) {
+
+    void setPhys(int idim, std::vector<float> *coords) {
       this->dims[idim].setPhys(*coords);
       this->updateCounts();
     }
-    void setPhys(std::vector<double> *xcoords, std::vector<double> *ycoords) {
+
+    void setPhys(std::vector<float> *xcoords, std::vector<float> *ycoords) {
       this->dims[0].setPhys(*xcoords);
       this->dims[1].setPhys(*ycoords);
       this->updateCounts();
     }
-    void setPhys(std::vector<double> *xcoords, std::vector<double> *ycoords, std::vector<double> *zcoords) {
+    void setPhys(std::vector<float> *xcoords, std::vector<float> *ycoords, std::vector<float> *zcoords) {
       this->dims[0].setPhys(*xcoords);
       this->dims[1].setPhys(*ycoords);
       this->dims[2].setPhys(*zcoords);
@@ -120,15 +96,16 @@ class RectlinearGrid: public GridBase {
 
     // ************************************************************************
     // core functions
-
     // return floor corner x,y,z index and lerp weights on x,y,z
-    CellLerp getVoxelLerp(double x, double y, double z) {
+    // can be overriden in subclass
+    //  - curvilinear
+    //  - cartesian
+    CellLerp getVoxelLerp(float x, float y, float z) {
       assert(this->isBounded(x,y,z));
 
       std::vector<int> indices = this->getVoxel(x, y, z);
-      std::vector<double> weights(this->dims.size(), 0);
-      std::vector<double> location{ x, y, z };
-      double whole;
+      std::vector<float> weights(this->dims.size(), 0);
+      std::vector<float> location{ x, y, z };
       for (int i = 0; i < this->dims.size(); i++) {
         int dimcoord0 = this->dims[i].phys[indices[i]];
         int dimcoord1 = this->dims[i].phys[indices[i+1]];
@@ -138,47 +115,13 @@ class RectlinearGrid: public GridBase {
       return cl;
     }
 
-    // return floor corner x,y,z index and lerp weights on x,y,z
-    CellSysEqLerp getVoxelSysEqLerp(double x, double y, double z) {
-      assert(this->isBounded(x,y,z));
-
-      std::vector<int> indices = this->getVoxel(x, y, z);
-      // MatrixXd cell = this->getVoxelCoords();
-      std::vector<double> weights(8, 0);
-      std::vector<double> location{ x, y, z };
-      double whole;
-      for (int i = 0; i < this->dims.size(); i++) {
-        int dimcoord0 = this->dims[i].phys[indices[i]];
-        int dimcoord1 = this->dims[i].phys[indices[i+1]];
-        weights[i] = (location[i] - dimcoord0) / (dimcoord1 - dimcoord0);
-      }
-      CellSysEqLerp cl = { indices, weights };
-      return cl;
-    }
-
-
-
-    void trilerpSysOfEq(double x, double y, double z) {
-
-    }
-
-    // glm::dmat3 getJacComp2Phys(std::vector<std::vector<double>> comp, Eigen::Matrix<double, 3, 8> coeff) {
-    //   Eigen::Matrix a = coeff[0];
-    //   std::vector<double> b = coeff[1];
-    //   std::vector<double> b = coeff[2];
-
-    //   glm::dmat3 jac(
-    //     a[1] + a[4]*comp[1] + a[5]*comp[2] + a[7]*comp[1]*comp[2],
-    //     a[2] + a[4]*comp[0] + a[6]*comp[2] + a[7]*comp[0]*comp[2],
-    //     a[3] + a[5]*comp[0] + a[6]*comp[1] + a[7]*comp[0]*comp[1],
-    //   )
-    // }
-
 
     // return corner Cell: corner x,y,z grid point index
-    std::vector<int> getVoxel(double x, double y, double z) {
+    // can be overriden in
+    //  - cartesian
+    std::vector<int> getVoxel(float x, float y, float z) {
       std::vector<int> indices(3, 0);
-      std::vector<double> location{ x, y, z };
+      std::vector<float> location{ x, y, z };
       // for each dimension
       for (int i = 0; i < this->dims.size(); i++) {
         // search for the index along this dimension
@@ -219,9 +162,14 @@ class RectlinearGrid: public GridBase {
     //		| /      | /
     //		|/_______|/
     //	000       100
-    std::vector<Array3d> getVoxelCoords(double x, double y, double z) {
-      std::vector<int> indices = this->getVoxel(x,y,z);
-      std::vector<Array3d> cell(8);
+    // low vtx
+
+    // given the coordinate index of the low corner vtx (v000)
+    // return the 8 coordinates (in Eigen Array3f) in the order
+    //  000, 100, 010, 110, 001, 101, 011, 111
+    std::vector<Array3f> getVoxelCoords(int i, int j, int k) {
+      std::vector<int> indices{i, j, k};
+      std::vector<Array3f> cell(8);
       cell[0] = this->getCoord(indices[0],     indices[1],     indices[2]);
       cell[1] = this->getCoord(indices[0] + 1, indices[1],     indices[2]);
       cell[2] = this->getCoord(indices[0],     indices[1] + 1, indices[2]);
@@ -233,8 +181,25 @@ class RectlinearGrid: public GridBase {
       return cell;
     }
 
-    Array3d getCoord(int i, int j, int k) {
-      Array3d coord {
+    // std::vector<Array3f> getVoxelCoords(float x, float y, float z) {
+    //   std::vector<int> indices = this->getVoxel(x,y,z);
+    //   std::vector<Array3f> cell(8);
+    //   cell[0] = this->getCoord(indices[0],     indices[1],     indices[2]);
+    //   cell[1] = this->getCoord(indices[0] + 1, indices[1],     indices[2]);
+    //   cell[2] = this->getCoord(indices[0],     indices[1] + 1, indices[2]);
+    //   cell[3] = this->getCoord(indices[0] + 1, indices[1] + 1, indices[2]);
+    //   cell[4] = this->getCoord(indices[0],     indices[1],     indices[2] + 1);
+    //   cell[5] = this->getCoord(indices[0] + 1, indices[1],     indices[2] + 1);
+    //   cell[6] = this->getCoord(indices[0],     indices[1] + 1, indices[2] + 1);
+    //   cell[7] = this->getCoord(indices[0] + 1, indices[1] + 1, indices[2] + 1);
+    //   return cell;
+    // }
+
+    // given the coordinate index of the low corner vtx (v000)
+    // return the 8 coordinates (in Eigen Array3f) in the order
+    //  000, 100, 010, 110, 001, 101, 011, 111 
+    Array3f getCoord(int i, int j, int k) {
+      Array3f coord {
         this->dims[0].phys[i],
         this->dims[1].phys[j],
         this->dims[2].phys[k], 
@@ -242,20 +207,8 @@ class RectlinearGrid: public GridBase {
       return coord;
     }
     
-
-    // std::vector<double> getLerpWeights(double x, double y, double z) {
-    //   std::vector<double> w(3, 0);
-    //   std::vector<double> location{ x, y, z };
-    //   double whole;
-    //   for (int i = 0; i < 3; i++) {
-    //     double index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
-    //     w[i] = modf(index, &whole);
-    //   }
-    // }
-
-    // struct Vertex[] getVoxelNeigbor(double x, double y, double z);
-    bool isBounded(double x, double y, double z) {
-      std::vector<double> location{ x, y, z };
+    bool isBounded(float x, float y, float z) {
+      std::vector<float> location{ x, y, z };
       bool bounded = (x >= this->dims[0].min && x <= this->dims[0].max) &&
                      (y >= this->dims[1].min && y <= this->dims[1].max) &&
                      (z >= this->dims[2].min && z <= this->dims[2].max);

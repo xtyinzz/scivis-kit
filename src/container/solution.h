@@ -1,11 +1,13 @@
-#ifndef SOLUTION_H
-#define SOLUTION_H
+#ifndef SVK_CONTRAINER_SOLUTION_H
+#define SVK_CONTRAINER_SOLUTION_H
 
 // #define _GLIBCXX_USE_CXX11_ABI 0
-#include "common.h"
+#include "common/util.h"
+#include "common/numerical.h"
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cerrno>
 #include <vector>
 // #include <numeric>
 // #include <functional>
@@ -35,7 +37,7 @@ class Solution {
     int length;
     // int precision;
     std::vector<int> dims;
-    std::vector<int > strides;
+    std::vector<int> strides;
     // ************************************************************************
     // constructor
     // default: init data to NULL
@@ -48,7 +50,11 @@ class Solution {
       this->length = 0;
     }
     // Construction 2: specify the 3 dimensions' lengths
-    Solution(int xdim, int ydim, int zdim) {
+    Solution(int xdim, int ydim, int zdim) { this->init3D(xdim, ydim, zdim); }
+    // Construction 3: specify the 2 dimensions' lengths
+    Solution(int xdim, int ydim) { this->init2D(xdim, ydim); }
+
+    void init3D(int xdim, int ydim, int zdim) {
       this->dims = std::vector<int>(3, 0);
       this->strides = std::vector<int>(3, 0);
 
@@ -57,10 +63,7 @@ class Solution {
       this->setDimLen(2, zdim);
       this->initData();
     }
-
-
-    // Construction 3: specify the 2 dimensions' lengths
-    Solution(int xdim, int ydim) {
+    void init2D(int xdim, int ydim) {
       this->dims = std::vector<int>(2, 0);
       this->strides = std::vector<int>(2, 0);
 
@@ -68,8 +71,6 @@ class Solution {
       this->setDimLen(1, ydim);
       this->initData();
     }
-    // ~Solution() { delete[] data; }
-
 
     // ************************************************************************
     // solution properties
@@ -87,19 +88,52 @@ class Solution {
 
     // ************************************************************************
     // data I/O
-    void load(const std::string& fpath) {
+    void load(const std::string& fpath, bool verbose=false) {
       std::ifstream fdata(fpath, std::ios::binary);
-      this->initData();
-
+      if (fdata.fail()) {
+        printf("File reading failed (%s)", fpath);
+      }
       if (this->data.empty()) {
         this->initData();
         std::cout << "initialized data upon reading." << std::endl;
       }
       fdata.read(reinterpret_cast<char*>(this->data.data()), sizeof(T)*this->length);
       fdata.close();
-      std::cout << "Read " << this->length << " of " << sizeof(T) << "-byte data." << std::endl;
+      if (verbose)
+        std::cout << "Read " << this->length << " of " << sizeof(T) << "-byte data." << std::endl;
     }
-    void save(const std::string& fpath) {
+
+    // initialize the Solution from vec
+    void fromVec(const std::string& fpath, bool verbose=false) {
+
+      // try {
+      //   std::ifstream fdata(fpath, std::ios::binary);
+      // } catch (const std::ios_base::failure& fail) {
+      //   printf("File reading failed (%s):", fpath);
+      //   std::cout << fail.what() << '\n';
+      //   return;
+      // }
+      std::ifstream fdata(fpath, std::ios::binary);
+      if (fdata.fail()) {
+        printf("File reading failed (%s): ", fpath.c_str());
+        std::cerr << strerror(errno) << "\n";
+        return;
+      }
+
+      std::vector<int> dims(3);
+      fdata.read(reinterpret_cast<char*>(dims.data()), sizeof(int)*3);
+      printf("%i, %i, %i, dims\n", dims[0], dims[1], dims[2]);
+      this->init3D(dims[0], dims[1], dims[2]);
+      fdata.read(reinterpret_cast<char*>(this->data.data()), sizeof(T)*this->length);
+      if (verbose) {
+          printf("Solution::fromVec complete: Solution read %i (%ix%ix%i) 3D float vector from \"%s\"\n",
+          this->length, dims[0], dims[1], dims[2], fpath.c_str());
+      }
+      fdata.close();
+    }
+
+    // dump raw data to fpath
+    void save(const std::string& fpath, bool verbose=true) {
       std::ofstream fdata(fpath, std::ios::binary);
       // do nothing if data hasn't been loaded
       if (this->data.empty()) {
@@ -110,7 +144,8 @@ class Solution {
 
       fdata.write(reinterpret_cast<char*>(this->data.data()), sizeof(T)*this->length);
       fdata.close();
-      std::cout << "Saved " << this->length << " of " << sizeof(T) << "-byte data to " << fpath << std::endl;
+      if (verbose)
+        std::cout << "Saved " << this->length << " of " << sizeof(T) << "-byte data to " << fpath << std::endl;
     }
     
     auto castPrecision(float val);
@@ -166,6 +201,7 @@ class Solution {
       else if (zi == this->getDimLen(2)) zi -= 2;
 
       int i = this->index(xi, yi, zi);
+      printf("index %i\n", i);
       return this->data[i];
     }
 
@@ -250,8 +286,12 @@ class Solution {
       return p;
     }
 
-    const T* getData() {
-      return this->data.data();
+    void setData(std::vector<T> *data) {
+      this->data = *data;
+    }
+
+    const std::vector<T>& getData() {
+      return this->data;
     }
 };
 

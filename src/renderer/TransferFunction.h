@@ -1,8 +1,8 @@
-#ifndef TRANSFERFUNCTION_H
-#define TRANSFERFUNCTION_H
+#ifndef SVK_RENDERER_TRANSFERFUNCTION_H
+#define SVK_RENDERER_TRANSFERFUNCTION_H
 
 #include "PieceWiseFunction.h"
-#include "common.h"
+#include "common/numerical.h"
 #include <glm/glm.hpp>
 // #include <Eigen/Dense>
 

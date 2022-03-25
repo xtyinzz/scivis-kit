@@ -1,83 +1,52 @@
-#ifndef GRID_CURVILINEAR_H
-#define GRID_CURVILINEAR_H
+#ifndef SVK_CONTRAINER_GRID_CURVILINEAR_H
+#define SVK_CONTRAINER_GRID_CURVILINEAR_H
 
-#include "common.h"
+// #include "common.h"
 #include "grid_base.h"
 #include "grid_rectlinear.h"
+#include "solution.h"
+#include "common/numerical.h"
 #include <assert.h>
 #include <iostream>
 #include <string>
 #include <cmath>
 #include <assert.h>
 #include <vector>
+#include <Eigen/Dense>
 
-// struct Cell {
-//   // Voxel representation: lower left xyz index;
-//   int xi, yi, zi;
-// };
-
-struct CellLerp {
-  // Voxel representation: lower left xyz index, and interpolation weights
-  std::vector<int> indices;
-  std::vector<double> weights;
-};
-
-// class Cell {
-//   public:
-//     int xi, yi, zi;
-//     double alpha, beta, gamma;
-
-//     Cell() {}
-//     Cell(int xi, int yi, int zi): xi(xi), yi(yi), zi(zi) {}
-
-//     void calcLerpWeights(double x, double y, double z) {
-//       this->alpha = (x - this->xi) / this->x.spacing;
-//       this->beta = (y - this->yi) / this->y.spacing;
-//       this->gamma = (z - this->zi) / this->z.spacing;
-//     }
-// }
-
-class DimPropertyCurvilinear: public DimPropertyRectlinear {
-  public:
-    // double EPS = 1e-8;
-    // std::vector<double> comp;
-    // int order;
-    // int stride;
-    DimPropertyCurvilinear() {}
-    DimPropertyCurvilinear(std::vector<double> coords): DimPropertyRectlinear(coords) { }
-};
+using namespace Eigen;
 
 // template <typename T>
-class CurvilinearGrid: public GridBase {
+class StructuredGrid: public GridBase {
   private:
 
   public:
-    std::string gtype = "Curvilinear";
-    std::vector<DimPropertyCurvilinear> dims;
+    std::string gtype = "Structured";
+    std::vector<DimPropertyBase> dims;
     RectlinearGrid *compGrid;
-    
-
+    Solution<Vector3f> coords;
     // cell count, vertex count
     int ccount = 0;
     int vcount = 0;
 
-    // xyzorder: order of axis. Ex: 
-    CurvilinearGrid() {}
-    CurvilinearGrid(int numDims) {
+    StructuredGrid() {}
+    StructuredGrid(int numDims) {
       this->dims.resize(numDims);
     }
-    // Constructor 2: non-negative indexed regular cartesian grid of domain (0, dim-1)
-    CurvilinearGrid(std::vector<double> *xCoords, std::vector<double> *yCoords, std::vector<double> *zCoords) {
+    StructuredGrid(int xdim, int ydim, int zdim) {
       this->dims.resize(3);
-      this->dims[0] = DimPropertyCurvilinear(*xCoords);
-      this->dims[1] = DimPropertyCurvilinear(*yCoords);
-      this->dims[2] = DimPropertyCurvilinear(*zCoords);
-
-      vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
-      ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
+      this->coords = Solution<Vector3f>(xdim, ydim, zdim);
+      // vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
+      // ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
+    }
+    StructuredGrid(int xdim, int ydim, int zdim, std::vector<Vector3f> *coords): StructuredGrid(xdim, ydim, zdim) {
+      this->coords.setData(coords);
+      // vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
+      // ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
     }
 
-        // TODO
+
+    // TODO
     void updateCounts() {
       // vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
       // ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
@@ -87,74 +56,60 @@ class CurvilinearGrid: public GridBase {
     int getVtxCount() { return this->vcount; }
     int getDimCount() { return this->dims.size(); } // what's return "dimensions of the grid" in hw write-up?
 
-    std::vector<double> getDomain(int idim) {
-      return {this->dims[idim].min, this->dims[idim].max};
+    std::vector<float> getDomain(int idim) {
+      return { this->dims[idim].min, this->dims[idim].max };
     }
 
     int getDimLen(int idim) { return this->dims[idim].len; }
-    void setPhys(int idim, std::vector<double> *coords) {
-      this->dims[idim].setPhys(*coords);
-      this->updateCounts();
-    }
-    void setPhys(std::vector<double> *xcoords, std::vector<double> *ycoords) {
-      this->dims[0].setPhys(*xcoords);
-      this->dims[1].setPhys(*ycoords);
-      this->updateCounts();
-    }
-    void setPhys(std::vector<double> *xcoords, std::vector<double> *ycoords, std::vector<double> *zcoords) {
-      this->dims[0].setPhys(*xcoords);
-      this->dims[1].setPhys(*ycoords);
-      this->dims[2].setPhys(*zcoords);
-      this->updateCounts();
-    }
-
-    void setCompGrid(RectlinearGrid *compGrid) {
-      this->compGrid = compGrid;
-    }
-
 
     // ************************************************************************
     // core functions
 
-    // return floor corner x,y,z index and lerp weights on x,y,z
+    // phys2comp
     // Given phys coord, output cell indices and comp space lerp weights by Newton's Method
-    CellLerp getVoxelLerp(double x, double y, double z, double tol=1.48e-8, int maxiter=50, double rtol=0.0) {
+    // return floor corner x,y,z index and lerp weights on x,y,z
+    virtual CellLerp getVoxelLerp(float x, float y, float z, int maxiter=50, float atol=1.48e-8, float rtol=0.0) {
       assert(this->isBounded(x,y,z));
 
+      // 1. locate the cell
       std::vector<int> indices = this->getVoxel(x, y, z);
-      std::vector<Array3d> compVoxelCoord = this->compGrid->getVoxelCoords(x, y, z);
-      Array3d lowVtx = compVoxelCoord[0];
-      Array3d highVtx = compVoxelCoord[1];
-      Array3d phys{ x, y, z };
+      std::vector<int> voxelIndices = this->getVoxel(x, y, z);
+      std::vector<Array3f> voxelCoords = this->getVoxelCoords(
+        voxelIndices[0], voxelIndices[1], voxelIndices[2]
+      );
+      Array3f phys{ x, y, z };
 
+      // 2. find comp
       // newton's method
-      Array3d init_comp = (lowVtx + highVtx) / 2.;
-      Array3d comp = init_comp;
-      Array3d goal_diff{0., 0., 0.};
-      for(int i = 0; i < maxiter; i++) {
-        std::vector<Array3d> coeff = trilerpSysEqCoeff(comp, lowVtx, highVtx, compVoxelCoord);
-        Array3d phys_est = trilerpSysEq(comp[0], comp[1], comp[2], coeff);
-        Matrix3Xd diff_funcval = phys_est - phys;
-
-        Matrix3d jac_inv = this->getJacInvComp2Phys(comp, coeff);
-        Array3d new_comp = comp - (jac_inv * diff_funcval).array();
-      }
-
-      
-
-      std::vector<double> weights(3, 0);
-      std::vector<double> location{ x, y, z };
-      double whole;
-      for (int i = 0; i < 3; i++) {
-
-      }
-      CellLerp cl = { indices, weights };
-      return cl;
-      // 1. find comp
+      Array3f comp = this->phys2comp_newtwon(phys, voxelCoords, maxiter, atol, rtol);
+      // 3. trilinear interpolate in comp grid
+      return this->compGrid->getVoxelLerp(comp[0], comp[1], comp[2]);
     }
 
-    Matrix3d getJacComp2Phys(Array3d comp, std::vector<Array3d> coeff) {
-      return Matrix3d {
+    Array3f phys2comp_newtwon(Array3f phys, std::vector<Array3f> physVoxelCoord,
+    int maxiter=50, float atol=1.48e-8, float rtol=0.0) {
+      Array3f lowVtx = physVoxelCoord[0];
+      Array3f highVtx = physVoxelCoord[1];
+      Array3f init_comp = (lowVtx + highVtx) / 2.;
+      Array3f comp = init_comp;
+      // Array3f goal_diff{0., 0., 0.};
+      for(int i = 0; i < maxiter; i++) {
+        std::vector<Array3f> coeff = trilerpSysEqCoeff(comp, lowVtx, highVtx, physVoxelCoord);
+        Array3f phys_est = trilerpSysEq(comp[0], comp[1], comp[2], coeff);
+        Matrix3Xf diff_funcval = phys_est - phys;
+
+        Matrix3f jac_inv = this->getJacInvComp2Phys(comp, coeff);
+        Array3f new_comp = comp - (jac_inv * diff_funcval).array();
+        if (allClose(comp, new_comp, rtol, atol)) {
+          break;
+        }
+        comp = new_comp;
+      }
+      return comp;
+    }
+
+    Matrix3f getJacComp2Phys(Array3f comp, std::vector<Array3f> coeff) {
+      return Matrix3f {
         {
           coeff[1][0] + coeff[4][0]*comp[1] + coeff[5][0]*comp[2] + coeff[7][0]*comp[1]*comp[2],
           coeff[2][0] + coeff[4][0]*comp[0] + coeff[6][0]*comp[2] + coeff[7][0]*comp[0]*comp[2],
@@ -173,72 +128,136 @@ class CurvilinearGrid: public GridBase {
       };
     }
 
-    Matrix3d getJacInvComp2Phys(Array3d comp, std::vector<Array3d> coeff) {
-      Matrix3d jac = this->getJacComp2Phys(comp, coeff);
-      double det = (-jac[0,0]*jac[1,1]*jac[2,2] - jac[0,1]*jac[1,2]*jac[2,0] - jac[0,2]*jac[1,0]*jac[2,1] + 
-                    jac[0,2]*jac[1,1]*jac[2,0] + jac[0,1]*jac[1,0]*jac[2,2] + jac[0,0]*jac[1,2]*jac[2,1]);
+    Matrix3f getJacInvComp2Phys(Array3f comp, std::vector<Array3f> coeff) {
+      Matrix3f jac = this->getJacComp2Phys(comp, coeff);
+      float det = (-jac(0, 0)*jac(1, 1)*jac(2, 2) - jac(0, 1)*jac(1, 2)*jac(2, 0) - jac(0, 2)*jac(1, 0)*jac(2, 1) + 
+                    jac(0, 2)*jac(1, 1)*jac(2, 0) + jac(0, 1)*jac(1, 0)*jac(2, 2) + jac(0, 0)*jac(1, 2)*jac(2, 1));
 
-      Matrix3d inv {
+      Matrix3f inv {
         {
-          jac[1,1]*jac[2,2] - jac[1,2]*jac[2,1],
-          -jac[0,1]*jac[2,2] + jac[0,2]*jac[2,1],
-          jac[0,1]*jac[1,2] - jac[0,2]*jac[1,1],
+          jac(1, 1)*jac(2, 2) - jac(1, 2)*jac(2, 1),
+          -jac(0, 1)*jac(2, 2) + jac(0, 2)*jac(2, 1),
+          jac(0, 1)*jac(1, 2) - jac(0, 2)*jac(1, 1),
         },
         {
-          -jac[1,0]*jac[2,2] + jac[1,2]*jac[2,0],
-          jac[0,0]*jac[2,2] - jac[0,2]*jac[2,0],
-          -jac[0,0]*jac[1,2] + jac[0,2]*jac[1,0],
+          -jac(1, 0)*jac(2, 2) + jac(1, 2)*jac(2, 0),
+          jac(0, 0)*jac(2, 2) - jac(0, 2)*jac(2, 0),
+          -jac(0, 0)*jac(1, 2) + jac(0, 2)*jac(1, 0),
         },
         {
-          jac[1,0]*jac[2,1] - jac[1,1]*jac[2,0],
-          jac[0,0]*jac[2,1] - jac[0,1]*jac[2,0],
-          jac[0,0]*jac[1,1] - jac[0,1]*jac[1,0],
+          jac(1, 0)*jac(2, 1) - jac(1, 1)*jac(2, 0),
+          jac(0, 0)*jac(2, 1) - jac(0, 1)*jac(2, 0),
+          jac(0, 0)*jac(1, 1) - jac(0, 1)*jac(1, 0),
         }
       };
+      
       return inv / det;
     }
 
-    // return corner Cell: corner x,y,z grid point index
-    std::vector<int> getVoxel(double x, double y, double z) {
-      std::vector<int> indices(3, 0);
-      std::vector<double> location{ x, y, z };
-      // for each dimension
-      for (int i = 0; i < this->dims.size(); i++) {
-        // search for the index along this dimension
-        DimPropertyCurvilinear *dim = &this->dims[i];
-        //
-        if (dim->phys[0] == location[i]) {
-          indices[i] = 0;
-          continue;
-        }
-        for (int j = 1; j < dim->len; j++) {
-          if (dim->phys[j-1] > location[i] && dim->phys[j] <= location[i]) {
-            indices[i] = j-1;
-            continue;
-          }
-        }
-      }
-      return indices;
+    //		    6________7  high-vtx
+    //		   /|       /|
+    //		  / |      / |
+    //		4/_______5/  |
+    //		|  2|___ |___|3
+    //		|  /     |  /
+    //		| /      | /
+    //		|/_______|/
+    //		0        1
+    //  low_vtx
+
+    //
+    //		 011_________111  high-vtx
+    //		   /|       /|
+    //		  / |      / |
+    //	001/_____101/  |
+    //		|010|___ |___|110
+    //		|  /     |  /
+    //		| /      | /
+    //		|/_______|/
+    //	000       100
+    // low vtx
+
+    // given the coordinate index of the low corner vtx (v000)
+    // return the 8 coordinates (in Eigen Array3f) in the order
+    //  000, 100, 010, 110, 001, 101, 011, 111
+    virtual std::vector<Array3f> getVoxelCoords(int i, int j, int k) {
+      std::vector<int> indices{i, j, k};
+      std::vector<Array3f> cell(8);
+      cell[0] = this->getCoord(indices[0],     indices[1],     indices[2]);
+      cell[1] = this->getCoord(indices[0] + 1, indices[1],     indices[2]);
+      cell[2] = this->getCoord(indices[0],     indices[1] + 1, indices[2]);
+      cell[3] = this->getCoord(indices[0] + 1, indices[1] + 1, indices[2]);
+      cell[4] = this->getCoord(indices[0],     indices[1],     indices[2] + 1);
+      cell[5] = this->getCoord(indices[0] + 1, indices[1],     indices[2] + 1);
+      cell[6] = this->getCoord(indices[0],     indices[1] + 1, indices[2] + 1);
+      cell[7] = this->getCoord(indices[0] + 1, indices[1] + 1, indices[2] + 1);
+      return cell;
     }
 
-    // std::vector<double> getLerpWeights(double x, double y, double z) {
-    //   std::vector<double> w(3, 0);
-    //   std::vector<double> location{ x, y, z };
-    //   double whole;
-    //   for (int i = 0; i < 3; i++) {
-    //     double index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
-    //     w[i] = modf(index, &whole);
-    //   }
+    // std::vector<Array3f> getVoxelCoords(float x, float y, float z) {
+    //   std::vector<int> indices = this->getVoxel(x,y,z);
+    //   std::vector<Array3f> cell(8);
+    //   cell[0] = this->getCoord(indices[0],     indices[1],     indices[2]);
+    //   cell[1] = this->getCoord(indices[0] + 1, indices[1],     indices[2]);
+    //   cell[2] = this->getCoord(indices[0],     indices[1] + 1, indices[2]);
+    //   cell[3] = this->getCoord(indices[0] + 1, indices[1] + 1, indices[2]);
+    //   cell[4] = this->getCoord(indices[0],     indices[1],     indices[2] + 1);
+    //   cell[5] = this->getCoord(indices[0] + 1, indices[1],     indices[2] + 1);
+    //   cell[6] = this->getCoord(indices[0],     indices[1] + 1, indices[2] + 1);
+    //   cell[7] = this->getCoord(indices[0] + 1, indices[1] + 1, indices[2] + 1);
+    //   return cell;
     // }
 
-    // struct Vertex[] getVoxelNeigbor(double x, double y, double z);
-    bool isBounded(double x, double y, double z) {
-      std::vector<double> location{ x, y, z };
-      bool bounded = (x >= this->dims[0].min && x <= this->dims[0].max) &&
-                     (y >= this->dims[1].min && y <= this->dims[1].max) &&
-                     (z >= this->dims[2].min && z <= this->dims[2].max);
-      return bounded;
+    // return corner Cell: corner x,y,z grid point index
+    // can be overriden in
+    //  - cartesian
+    // virtual std::vector<int> getVoxelIndex(float x, float y, float z) {
+    //   // std::vector<int> indices(3, 0);
+    //   // std::vector<float> location{ x, y, z };
+    //   // // for each dimension
+    //   // for (int i = 0; i < this->dims.size(); i++) {
+    //   //   // search for the index along this dimension
+    //   //   DimPropertyRectlinear *dim = &this->dims[i];
+    //   //   //
+    //   //   if (dim->phys[0] == location[i]) {
+    //   //     indices[i] = 0;
+    //   //     continue;
+    //   //   }
+    //   //   for (int j = 1; j < dim->len; j++) {
+    //   //     if (dim->phys[j-1] > location[i] && dim->phys[j] <= location[i]) {
+    //   //       indices[i] = j-1;
+    //   //       continue;
+    //   //     }
+    //   //   }
+    //   // }
+    //   // return indices;
+    // }
+
+    // given the coordinate index of the low corner vtx (v000)
+    // return the 8 coordinates (in Eigen Array3f) in the order
+    //  000, 100, 010, 110, 001, 101, 011, 111 
+    virtual Array3f getCoord(int i, int j, int k) {
+      Array3f coord = this->coords.getVal(i, j, k);
+      return coord;
     }
+
+    // check if a coordiniate is inside a cell cornerd at i,j,k index
+    // bool isBoundedCell(float x, float y, float z, int i, int j, int k) {
+
+    // }
+
+    // virtual bool isBounded(float x, float y, float z) {
+    //   // Array3f phys{x,y,z};
+    //   // Array3f comp = this->phys2comp_newtwon(phys, )
+
+
+    //   // std::vector<float> location{ x, y, z };
+    //   // bool bounded = (x >= this->dims[0].min && x <= this->dims[0].max) &&
+    //   //                (y >= this->dims[1].min && y <= this->dims[1].max) &&
+    //   //                (z >= this->dims[2].min && z <= this->dims[2].max);
+    //   // return bounded;
+    //   return;
+    // }
 };
 /*
 Question:

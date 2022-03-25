@@ -1,7 +1,7 @@
-#ifndef GRID_BASE_H
-#define GRID_BASE_H
+#ifndef SVK_CONTRAINER_GRID_BASE_H
+#define SVK_CONTRAINER_GRID_BASE_H
 
-#include "common.h"
+
 #include <assert.h>
 #include <iostream>
 #include <string>
@@ -18,12 +18,12 @@
 // class Cell {
 //   public:
 //     int xi, yi, zi;
-//     double alpha, beta, gamma;
+//     float alpha, beta, gamma;
 
 //     Cell() {}
 //     Cell(int xi, int yi, int zi): xi(xi), yi(yi), zi(zi) {}
 
-//     void calcLerpWeights(double x, double y, double z) {
+//     void calcLerpWeights(float x, float y, float z) {
 //       this->alpha = (x - this->xi) / this->x.spacing;
 //       this->beta = (y - this->yi) / this->y.spacing;
 //       this->gamma = (z - this->zi) / this->z.spacing;
@@ -32,26 +32,26 @@
 struct CellLerp {
   // Voxel representation: lower left xyz index, and interpolation weights
   std::vector<int> indices;
-  std::vector<double> weights;
+  std::vector<float> weights;
 };
 
 struct CellSysEqLerp {
   // Voxel representation: lower left xyz index, and interpolation weights
   std::vector<int> indices;
-  std::vector<double> weights;
+  std::vector<float> weights;
 };
 
 class DimPropertyBase {
   public:
-    // double EPS = 1e-8;
-    double min, max;
+    // float EPS = 1e-8;
+    float min, max;
     int len;
     // int order;
     // int stride;
     DimPropertyBase() {}
     ~DimPropertyBase(){}
 
-    // virtual int getIndex(double x, double y, double z);
+    // virtual int getIndex(float x, float y, float z);
 };
 
 // template <typename T>
@@ -67,7 +67,7 @@ class GridBase {
     virtual int getVtxCount() = 0;
     virtual int getDimCount() = 0;
 
-    virtual std::vector<double> getDomain(int idim) = 0;
+    virtual std::vector<float> getDomain(int idim) = 0;
     virtual int getDimLen(int idim) = 0;
 
 
@@ -75,21 +75,21 @@ class GridBase {
     // core functions
 
     // return corner Cell: corner x,y,z grid point index
-    virtual std::vector<int> getVoxel(double x, double y, double z) = 0;
-    virtual CellLerp getVoxelLerp(double x, double y, double z) = 0;
+    virtual std::vector<int> getVoxel(float x, float y, float z) = 0;
+    virtual CellLerp getVoxelLerp(float x, float y, float z) = 0;
 
-    // std::vector<double> getLerpWeights(double x, double y, double z) {
-    //   std::vector<double> w(3, 0);
-    //   std::vector<double> location{ x, y, z };
-    //   double whole;
+    // std::vector<float> getLerpWeights(float x, float y, float z) {
+    //   std::vector<float> w(3, 0);
+    //   std::vector<float> location{ x, y, z };
+    //   float whole;
     //   for (int i = 0; i < 3; i++) {
-    //     double index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
+    //     float index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
     //     w[i] = modf(index, &whole);
     //   }
     // }
 
-    // struct Vertex[] getVoxelNeigbor(double x, double y, double z);
-    virtual bool isBounded(double x, double y, double z) = 0;
+    // struct Vertex[] getVoxelNeigbor(float x, float y, float z);
+    virtual bool isBounded(float x, float y, float z) = 0;
 };
 /*
 Question:

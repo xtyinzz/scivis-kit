@@ -1,7 +1,7 @@
-#ifndef PIECEWISEFUNCTION_H
-#define PIECEWISEFUNCTION_H
+#ifndef SVK_RENDERER_PIECEWISEFUNCTION_H
+#define SVK_RENDERER_PIECEWISEFUNCTION_H
 
-#include "common.h"
+#include "common/numerical.h"
 #include <iostream>
 #include <fstream>
 #include <string>
