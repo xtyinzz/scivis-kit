@@ -234,8 +234,8 @@ class SphericalBlockDataset(Dataset):
     self.axis = axis
     self.curv = torch.tensor(self.curv)
     self.cart = torch.tensor(self.cart)
-    self.carts = self.get_block(self.cart, self.downscale, self.axis)
-    self.curvs = self.get_block(self.curv, self.downscale, self.axis)
+    self.carts = self.divide_block(self.cart, self.downscale, self.axis)
+    self.curvs = self.divide_block(self.curv, self.downscale, self.axis)
     # self.cart = self.coords[..., cart_idx].reshape(-1, len(cart_idx))
     
     self.hasIntrans = False
@@ -274,10 +274,11 @@ class SphericalBlockDataset(Dataset):
       x_valid[i] = coords[val_indices]
     return x_train, x_valid
 
-  def get_block(self, coords, downscale, axis):
+  def divide_block(self, coords, downscale, axis):
     dim_chunks = [np.arange(0, length+1, length//downscale) for length in coords.shape[:-1]]
     coords_block = []
     dimi, dimj, dimk = dim_chunks
+    self.block_indices = []
     for i in range(len(dimi)-1):
       block_i = [dimi[i], dimi[i+1]]
       for j in range(len(dimj)-1):
@@ -288,7 +289,24 @@ class SphericalBlockDataset(Dataset):
           block = coords[ block_i[0]:block_i[1], block_j[0]:block_j[1], block_k[0]:block_k[1] ]
           # reshape coord block to (N, 3)
           coords_block.append(block.reshape(-1, block.shape[-1]))
+
+          block_index = [[block_i[0], block_i[1]], [block_j[0], block_j[1]], [block_k[0], block_k[1]]]
+          self.block_indices.append(block_index)
+    self.block_indices = np.array(self.block_indices)
     return coords_block
+
+  def get_block_index(self, i, j, k, block_index_ranges):
+    block_index_ranges = self.block_indices
+    result = -1
+    for blocki, index_range in enumerate(block_index_ranges):
+      isin = True
+      for indexi, index in enumerate([i,j,k]):
+        if index < index_range[indexi][0] or index > index_range[indexi][1]:
+          isin = False
+      if isin:
+        result = blocki
+        break
+    return result
 
   def __len__(self):
     return len(self.cart_train)

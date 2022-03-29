@@ -201,7 +201,7 @@ class Solution {
       else if (zi == this->getDimLen(2)) zi -= 2;
 
       int i = this->index(xi, yi, zi);
-      printf("index %i\n", i);
+      // printf("index %i\n", i);
       return this->data[i];
     }
 
@@ -286,8 +286,8 @@ class Solution {
       return p;
     }
 
-    void setData(std::vector<T> *data) {
-      this->data = *data;
+    void setData(const std::vector<T> &data) {
+      this->data = data;
     }
 
     const std::vector<T>& getData() {
