@@ -109,7 +109,6 @@ def main():
 
 
   comp_preds, comps, physs = reconstruct_blocks(models, dataset)
-
   maes = []
   mses = []
   for comp_pred, comp in zip(comp_preds, comps):
@@ -124,6 +123,7 @@ def main():
     'mae': maes,
     'mse': mses,
   }
+
   torch.save(phys2comp_eval, 'eval/phys2comp_eval.pk')
 
   # # write data

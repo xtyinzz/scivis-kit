@@ -78,7 +78,7 @@ def get_vts(dims, points, scalar_fields={}, vector_fields={}):
       pd.AddArray(vtk_array)
   
   for i, (k, v) in enumerate(vector_fields.items()):
-    vtk_array = numpy_support.numpy_to_vtk(v)
+    vtk_array = numpy_support.numpy_to_vtk(v.reshape(-1, 3))
     vtk_array.SetName(k)
     if i == 0:
       pd.SetVectors(vtk_array)

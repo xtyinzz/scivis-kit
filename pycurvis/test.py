@@ -6,47 +6,47 @@ from torch.utils.data import DataLoader, dataloader
 from tqdm import tqdm
 from cfg.configs import Config
 from util.args import parse_args
-from data.data import SphericalDataset, train_val
-from train import load_checkpoint
+from data.data import SphericalBlockDataset, SphericalDataset
+from train_block import load_checkpoint, load_checkpoint_block
 from eval.util import mae, mse, psnr, np2vts, write_vts
-from vis_io import get_vts, write_vts
+from data.vis_io import get_vts, write_vts
 
-def get_data(cfgObj, **dataset_param):
-  dataset = SphericalDataset(**dataset_param)
-  return dataset
+# def get_data(cfgObj, **dataset_param):
+#   dataset = SphericalDataset(**dataset_param)
+#   return dataset
 
-def get_model(model_path, nncfg):
-  ckpt = load_checkpoint(model_path, nncfg)
-  model = ckpt['model']
-  return model
+# def get_model(model_path, nncfg):
+#   ckpt = load_checkpoint(model_path, nncfg)
+#   model = ckpt['model']
+#   return model
 
-def inference(model, dataset, dataloader):
-  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  model.to(device)
+# def inference(model, dataset, dataloader):
+#   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#   model.to(device)
 
-  # inputs = []
-  preds = []
-  gts = []
-  with torch.no_grad():
-    for bi, data in enumerate(tqdm(dataloader)):
-      in_data = data[0].to(device)
-      pred = model(in_data)
+#   # inputs = []
+#   preds = []
+#   gts = []
+#   with torch.no_grad():
+#     for bi, data in enumerate(tqdm(dataloader)):
+#       in_data = data[0].to(device)
+#       pred = model(in_data)
 
-      # accumulate complete data
-      # inputs.append(pos_time.detach().cpu())
-      preds.append(pred.detach().cpu())
-      gts.append(data[1])
+#       # accumulate complete data
+#       # inputs.append(pos_time.detach().cpu())
+#       preds.append(pred.detach().cpu())
+#       gts.append(data[1])
 
-      # if (bi+1)*dataloader.batch_size >= len(dataset)//4:
-      #   break
+#       # if (bi+1)*dataloader.batch_size >= len(dataset)//4:
+#       #   break
   
-  # inputs = torch.concat(inputs, 0)
-  preds = torch.concat(preds, 0)
-  gts = torch.concat(gts, 0)
+#   # inputs = torch.concat(inputs, 0)
+#   preds = torch.concat(preds, 0)
+#   gts = torch.concat(gts, 0)
 
-  print(f'\nSHAPES: ', preds.shape, gts.shape ,'\n')
+#   print(f'\nSHAPES: ', preds.shape, gts.shape ,'\n')
 
-  return preds.numpy(), gts.numpy()
+#   return preds.numpy(), gts.numpy()
 
 def evaluate(pred:np.ndarray, gt:np.ndarray, verbose=True):
   '''
@@ -64,21 +64,45 @@ def evaluate(pred:np.ndarray, gt:np.ndarray, verbose=True):
 
   return vmae, vmse
 
+def reconstruct(model: nn.Module, dataset: SphericalDataset):
+  dataloader = DataLoader(dataset, dataset.nbatch, shuffle=False)
+
+  comp_preds = []
+  comp_trans = dataset.outpp
+  phys_trans = dataset.inpp
+  for bi, phys in tqdm(enumerate(dataloader)):
+    
+    model.eval()
+    device = next(model.parameters()).device
+    with torch.no_grad():
+      phys_input = torch.tensor(phys).to(device)
+      comp_pred = model(phys_input).detach().cpu().numpy()
+
+    comp_pred = comp_trans.inverse_transform(comp_pred)
+    comp_preds.append(comp_pred)
+
+  comp_preds = np.concatenate(comp_preds).reshape(dataset.dims)
+  print("prediction shape:", comp_preds.shape)
+  return comp_preds, dataset.curv, dataset.cart
+
 def reconstruct_blocks(models: list, dataset: SphericalBlockDataset):
   num_block = len(dataset)
   comp_pred_blocks = []
   comp_blocks = []
   phys_blocks = []
   for bi in tqdm(range(num_block)):
-    phys = ds.curvs[bi][0]
-    phys_trans = ds.curvs[bi][1]
-    comp = ds.cart[bi][0]
-    comp_trans = ds.cart[bi][1]
+    phys = dataset.curvs[bi][0]
+    phys_trans = dataset.curvs[bi][1]
+    comp = dataset.carts[bi][0]
+    comp_trans = dataset.carts[bi][1]
 
     model = models[bi]
     model.eval()
+    device = next(model.parameters()).device
     with torch.no_grad():
-      comp_pred = model(phys).detach().cpu().numpy()
+      phys_input = torch.tensor(phys).to(device)
+      comp_pred = model(phys_input).detach().cpu().numpy()
+
     comp_pred = comp_trans.inverse_transform(comp_pred)
     comp_pred_blocks.append(comp_pred)
     comp_blocks.append(comp_trans.inverse_transform(comp))
@@ -88,57 +112,63 @@ def reconstruct_blocks(models: list, dataset: SphericalBlockDataset):
 
 def main():
   args = parse_args()
-  cfgObj = Config(args.testcfg)
+  testcfg = Config(args.testcfg)
   nncfg = Config(args.nncfg)
-  testcfg = cfgObj.config
-  
   # get model
-  model_path = testcfg['model_path']
-  model = get_model(model_path, nncfg)
+  ckpt = load_checkpoint_block(testcfg.config['model_path'], nncfg)
+  models = ckpt['models']
 
   # get data
-
-  dataset = get_data(cfgObj, **nncfg.get_dataset_param())
-
-  nbatch = nncfg.config['train']['batch']
-  dataloader = DataLoader(dataset, batch_size=nbatch, shuffle=False)
-
+  # dataset = SphericalBlockDataset(**nncfg.get_dataset_param())
+  dataset = nncfg.get_dataset()
+  dataset.nbatch = nncfg['train']['batch']
+  # nbatch = nncfg.config['train']['batch']
+  # dataloader = DataLoader(dataset, batch_size=nbatch, shuffle=False)
   # train_sampler, val_dataset = train_val(dataset, .2)
-
   # dataloader = torch.utils.data.DataLoader(dataset, batch_size=nbatch, 
   #                                           sampler=train_sampler)
-
   # valid_loader = DataLoader(val_dataset, batch_size=nbatch, shuffle=False)
 
 
 
-  pred, gt = inference(model, dataset, dataloader)
+  comp_preds, comps, physs = reconstruct(models, dataset)
+  maes, mses = evaluate(comp_preds, comps, verbose=True)
 
-  _, _ = evaluate(pred, gt, verbose=True)
+  phys2comp_single_eval = {
+    'comp_preds': comp_preds,
+    'mae': maes,
+    'mse': mses,
+  }
 
-  # write data
-  out_dir = testcfg['out_dir']
-  vis_out_dir = testcfg['vis_out_dir']
-  out_name = testcfg['out_name']
+  torch.save(phys2comp_single_eval, 'eval/phys2comp_single_eval.pk')
 
-  pred = dataset.outpp.inverse_transform(pred)
-  gt = dataset.outpp.inverse_transform(gt)
+  comp_diff = np.abs(comp_preds - comp_preds)
+  diff_field = get_vts(dataset.dims, physs, vector_fields={"comp_diff": comp_diff})
+  write_vts("eval/earth_comp_diff_field.vts")
+
+  # # write data
+  # out_dir = testcfg['out_dir']
+  # vis_out_dir = testcfg['vis_out_dir']
+  # out_name = testcfg['out_name']
+
+  # pred = dataset.outpp.inverse_transform(pred)
+  # gt = dataset.outpp.inverse_transform(gt)
 
 
-  # output numpy
-  out_path = os.path.join(out_dir, f"pred_{out_name}.npy")
-  np.save(out_path, pred)
-  out_path = os.path.join(out_dir, f"gt_{out_name}.npy")
-  np.save(out_path, gt)
+  # # output numpy
+  # out_path = os.path.join(out_dir, f"pred_{out_name}.npy")
+  # np.save(out_path, pred)
+  # out_path = os.path.join(out_dir, f"gt_{out_name}.npy")
+  # np.save(out_path, gt)
 
 
-  pred_vts = get_vts(dataset.dims, pred)
-  gt_vts = get_vts(dataset.dims, gt)
-  # output vts for visualzation
-  out_path = os.path.join(out_dir, f"pred_{out_name}.vts")
-  write_vts(out_path, pred_vts)
-  out_path = os.path.join(out_dir, f"gt_{out_name}.vts")
-  write_vts(out_path, gt_vts)
+  # pred_vts = get_vts(dataset.dims, pred)
+  # gt_vts = get_vts(dataset.dims, gt)
+  # # output vts for visualzation
+  # out_path = os.path.join(out_dir, f"pred_{out_name}.vts")
+  # write_vts(out_path, pred_vts)
+  # out_path = os.path.join(out_dir, f"gt_{out_name}.vts")
+  # write_vts(out_path, gt_vts)
 
 
 
