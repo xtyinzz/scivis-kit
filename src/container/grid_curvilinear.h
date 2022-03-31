@@ -33,6 +33,7 @@ class CurvilinearGrid: public GridBase {
     std::vector<DimPropertyBase> dims;
     RectlinearGrid *compGrid;
     Solution<Vector3f> coords;
+    Array<float, 3, 2> bbox;
     // cell count, vertex count
     int ccount = 0;
     int vcount = 0;
@@ -279,22 +280,19 @@ class CurvilinearGrid: public GridBase {
     // }
 
     virtual bool isBounded(float x, float y, float z) {
-      return false;
       // Array3f phys{x,y,z};
       // Array3f comp = this->phys2comp_newtwon(phys, )
-
-
-      // std::vector<float> location{ x, y, z };
-      // bool bounded = (x >= this->dims[0].min && x <= this->dims[0].max) &&
-      //                (y >= this->dims[1].min && y <= this->dims[1].max) &&
-      //                (z >= this->dims[2].min && z <= this->dims[2].max);
-      // return bounded;
+      bool bounded = (x >= this->dims[0].min && x <= this->dims[0].max) &&
+                     (y >= this->dims[1].min && y <= this->dims[1].max) &&
+                     (z >= this->dims[2].min && z <= this->dims[2].max);
+      return bounded;
     }
 
     void findBoundBoxPhysical() {
-      Vector3f mins = this->coords[0];
-      Vector3f maxs = this->coords[0];
-      for (const Vector3f &coord : this->coords) {
+      std::vector<Vector3f> coordsData = this->coords.getData();
+      Array3f mins = coordsData[0];
+      Array3f maxs = coordsData[0];
+      for (const Vector3f &coord : coordsData) {
         for (int i = 0; i < 3; i++) {
           if (coord(i) < mins(i)) {
             mins(i) = coord(i);
@@ -304,13 +302,14 @@ class CurvilinearGrid: public GridBase {
           }
         }
       }
-      this->dims[0].min = mins(0);
-      this->dims[1].min = mins(1);
-      this->dims[2].min = mins(2);
+      this->bbox.col(0) = mins;
+      this->bbox.col(1) = maxs;
 
-      this->dims[0].max = max(0);
-      this->dims[1].max = max(1);
-      this->dims[2].max = max(2);
+      for (int i = 0; i < 3; i++) {
+        this->dims[i].min = mins(i);
+        this->dims[i].max = maxs(i);
+      }
+
     }
 };
 /*
