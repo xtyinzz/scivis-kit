@@ -204,9 +204,11 @@ class SphericalDataset(Dataset):
     assert len(self.curv) == len(self.cart)
 
     if intrans is not None:
+      print("transforming inputs")
       self.cart_prep, self.inpp = fitTransPipeline(self.cart.reshape(-1, len(cart_idx)))
       # print(self.cart.mean())
     if outtrans is not None:
+      print("transforming outputs")
       self.curv_prep, self.outpp = fitTransPipeline(self.curv.reshape(-1, len(curv_idx)))
       # print(self.curv.mean())
   

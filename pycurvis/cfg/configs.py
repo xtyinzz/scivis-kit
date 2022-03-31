@@ -1,8 +1,8 @@
 import os
 import torch
 import yaml
-from data.data import VBHGridDataset
-from network.network import MLP, ResMLP, Siren
+from data.data import VBHGridDataset, SphericalDataset, SphericalBlockDataset
+from network.network import MLP, AttentionNetwork, ResMLP, Siren
 # parse config files; reuse for your own project
 class Config():
   '''
@@ -39,7 +39,18 @@ class Config():
     cfg = self.config['dataset']
     param = cfg['param']
     return param
-
+  
+  def get_dataset(self):
+    cfg = self.config['dataset']
+    name = cfg['type']
+    param = cfg['param']
+    dataset = None
+    if name == 'mantle_coord':
+      dataset = SphericalDataset(**param)
+    elif name == "mantle_coord_block":
+      dataset = SphericalBlockDataset(**param)
+    return dataset
+  
   def get_optim(self, model):
     '''
     get nn.optim: supporting "Adam", "AdamW"
@@ -90,6 +101,8 @@ class Config():
       model = MLP(**param)
     elif 'mlp_pe_res' == name:
       model = ResMLP(**param)
+    elif 'attn_net' == name:
+      model = AttentionNetwork(**param)
     return model
 
   def get_train_args(self):

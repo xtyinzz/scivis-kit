@@ -1,3 +1,4 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 from util.utils import report_gpumem, cpuStats
@@ -103,6 +104,88 @@ class ResMLP(nn.Module):
 
     return self.final(x)
 
+# Feed Forward Network in Transformer Encoder
+class FFN(nn.Module):
+  def __init__(self, embed_dim, ff_dim, act_fn, dropout=0.):
+    super(FFN, self).__init__()
+    # refactor: take out self
+    self.linear1 = nn.Linear(embed_dim, ff_dim)
+    self.act_fn = act_fn
+    self.dropout1 = nn.Dropout(dropout)
+    self.linear2 = nn.Linear(ff_dim, embed_dim)
+    self.dropout2 = nn.Dropout(dropout)
+
+    self.proj = nn.Sequential(
+        self.linear1,
+        self.act_fn,
+        self.dropout1,
+        self.linear2,
+        self.dropout2
+    )
+    self.norm2 = nn.LayerNorm(embed_dim)
+
+  def forward(self, x):
+    # FFN
+    x_proj = self.proj(x)
+    # Add & Norm
+    x = self.norm2(x + x_proj)
+    return x
+
+class TransformerBlock(nn.Module):
+  def __init__(self, embed_dim=256, num_heads=8, # attention parameters
+               ff_dim=512, dropout=0., act_fn=nn.GELU(), # projection parameters
+               transpose=False):
+    super(TransformerBlock, self).__init__()
+    # attention
+    self.attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
+    self.norm1 = nn.LayerNorm(embed_dim)
+    self.proj = FFN(embed_dim, ff_dim, act_fn, dropout)
+    self.transpose = transpose
+
+  def forward(self, x):
+    if self.transpose:
+      x = x.transpose(1,2)
+    x_attn, _ = self.attn(x, x, x, need_weights=False)
+    x = self.norm1(x + x_attn)
+
+    x = self.proj(x)
+    if self.transpose:
+      x = x.transpose(1,2)
+    return x
+
+class AttentionNetwork(nn.Module):
+  def __init__(self, in_dim, out_dim, embed_dim, num_blocks, num_heads,
+               ff_dim, dropout=0., act_fn=nn.ReLU(),
+               transpose=False):
+    super(AttentionNetwork, self).__init__()
+    self.in_proj = LinearLayer(in_dim, embed_dim, act_fn=None, use_norm=False)
+    self.attn_blocks = nn.ModuleList([])
+    for i in range(num_blocks):
+      self.attn_blocks.append(
+        nn.Sequential(
+          TransformerBlock(embed_dim, num_heads, ff_dim, dropout, act_fn, transpose)
+        )
+      )
+    self.attn_blocks = nn.Sequential(*self.attn_blocks)
+    self.out_pool = nn.AdaptiveAvgPool1d(1)
+    self.out_proj = LinearLayer(embed_dim, out_dim, act_fn=nn.Tanh(), use_norm=False)
+
+  def forward(self, x: torch.Tensor):
+    # x: (B, N, C)
+    if len(x.shape) == 2:
+      x = x[..., None]
+    x = self.in_proj(x)
+    for atb in self.attn_blocks:
+      x = atb(x)
+    x = self.out_pool(x.transpose(1,2))
+    x = torch.flatten(x, 1) # (B, N, 1)
+    x = self.out_proj(x)
+    # print(x.shape)
+    # print("************* GPU *************")
+    # report_gpumem()
+    # print("************* CPU *************")
+    # cpuStats()
+    return x
 
 # Author: Vincent Sitzmann
 # Source: https://github.com/vsitzmann/siren/blob/master/explore_siren.ipynb

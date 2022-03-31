@@ -290,6 +290,28 @@ class CurvilinearGrid: public GridBase {
       //                (z >= this->dims[2].min && z <= this->dims[2].max);
       // return bounded;
     }
+
+    void findBoundBoxPhysical() {
+      Vector3f mins = this->coords[0];
+      Vector3f maxs = this->coords[0];
+      for (const Vector3f &coord : this->coords) {
+        for (int i = 0; i < 3; i++) {
+          if (coord(i) < mins(i)) {
+            mins(i) = coord(i);
+          }
+          if (coord(i) > maxs(i)) {
+            maxs(i) = coord(i);
+          }
+        }
+      }
+      this->dims[0].min = mins(0);
+      this->dims[1].min = mins(1);
+      this->dims[2].min = mins(2);
+
+      this->dims[0].max = max(0);
+      this->dims[1].max = max(1);
+      this->dims[2].max = max(2);
+    }
 };
 /*
 Question:

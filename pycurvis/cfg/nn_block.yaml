@@ -23,7 +23,7 @@ model: {
 # x1x2x3: regular grid alike
 
 dataset: {
-  type: 'mantle_coord',
+  type: 'mantle_coord_block',
   param: {
     data_path: "../data/earth_nopole.npy",
     curv_idx: [0,1,2],

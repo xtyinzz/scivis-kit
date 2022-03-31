@@ -10,6 +10,7 @@ from cfg.configs import Config
 from util.utils import report_gpumem
 import yaml
 import signal
+from tqdm import tqdm, trange
 
 '''
 TODO:
@@ -30,6 +31,21 @@ def save_checkpoint(model, optim, epoch, batch, loss, log_dir):
               }, pckpt)
   print(f'checkpoint saved at {pckpt}', flush=True)
 
+def save_checkpoint_block(models, optims, epoch, batch, loss, log_dir):
+  loss_str = f'{float(loss):.2e}'
+  pckpt = os.path.join(log_dir, f'ckpt_{epoch:03}_{batch:03}_{loss_str}')
+  torch.save({
+              'models' : [model.state_dict() for model in models],
+              'optims' : [optim.state_dict() for optim in optims],
+              'epoch' : epoch,
+              'batch' : batch,
+              'loss': loss,
+              # 'metrics' : metrics.state_dict() if metrics is not None else dict(),
+              # 'best_metrics' : best_metrics.state_dict() if best_metrics is not None else dict(),
+              }, pckpt)
+  print(f'checkpoint saved at {pckpt}', flush=True)
+
+# return a ckpt containing model, optim, epoch, and loss
 def load_checkpoint(ckpt_path, config:Config):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   ckpt = torch.load(ckpt_path, map_location=device)
@@ -43,6 +59,24 @@ def load_checkpoint(ckpt_path, config:Config):
   ckpt['optim'] = optim
   return ckpt
 
+def load_checkpoint_block(ckpt_path, config:Config):
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  ckpt = torch.load(ckpt_path, map_location=device)
+  # replace state_dict with actual object
+  num_model = len(ckpt['models'])
+  models = [0] * num_model
+  optims = [0] * num_model
+  for i in trange(num_model):
+    models[i] = config.get_model()
+    models[i].to(device)
+    optims[i] = config.get_optim(models[i])
+    models[i].load_state_dict(ckpt['models'][i])
+    optims[i].load_state_dict(ckpt['optims'][i])
+  ckpt['models'] = models
+  ckpt['optims'] = optims
+  return ckpt
+
+# load stat_dict for given model and optim
 def resume_checkpoint(ckpt_path, model, optim):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   ckpt = torch.load(ckpt_path, map_location=device)
@@ -51,6 +85,16 @@ def resume_checkpoint(ckpt_path, model, optim):
   optim.load_state_dict(ckpt['optim'])
   return ckpt['epoch']
 
+# load stat_dict for given models and optims
+def resume_checkpoint_block(ckpt_path, models, optims):
+  assert len(models) == len(optims)
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  ckpt = torch.load(ckpt_path, map_location=device)
+  # replace state_dict with actual object
+  for i in trange(len(models)):
+    models[i].load_state_dict(ckpt['models'][i])
+    optims[i].load_state_dict(ckpt['optims'][i])
+  return ckpt['epoch']
 
 def main():
   # ************************  signal hanlder ********************************
@@ -76,8 +120,9 @@ def main():
   batch_log_step = cfg_train['batch_log_step']
 
   # data
-  dataset_param = config.get_dataset_param()
-  dataset = SphericalDataset(**dataset_param)
+  # dataset_param = config.get_dataset_param()
+  # dataset = SphericalDataset(**dataset_param)
+  dataset = config.get_dataset()
 
   val_split = config.config['dataset']['valid_split']
   train_sampler, val_dataset = train_val(dataset, val_split)
@@ -89,8 +134,9 @@ def main():
 
   # model, optim, loss
   log_dir = config.config['model']['log_dir']
-  model_param = config.get_model_param()
-  model = MLP(**model_param)
+  # model_param = config.get_model_param()
+  # model = MLP(**model_param)
+  model = config.get_model()
   optim = config.get_optim(model)
   lossl1 = nn.L1Loss()
   lossl2 = nn.MSELoss()
@@ -145,7 +191,7 @@ def main():
       print_bi += 1
       if print_bi % print_step == 0:
         print_train_loss /= print_bi
-        print(f'    -BATCH: epoch{epoch:03}-batch{bi:03}-train-loss: {print_train_loss}', flush=True)
+        print(f'    -BATCH: epoch{epoch:03}-batch{bi:03}-train-loss: {print_train_loss:.4e}', flush=True)
         print_bi = 0
         print_train_loss = 0
       

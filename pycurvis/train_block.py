@@ -45,6 +45,7 @@ def save_checkpoint_block(models, optims, epoch, batch, loss, log_dir):
               }, pckpt)
   print(f'checkpoint saved at {pckpt}', flush=True)
 
+# return a ckpt containing model, optim, epoch, and loss
 def load_checkpoint(ckpt_path, config:Config):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   ckpt = torch.load(ckpt_path, map_location=device)
@@ -58,6 +59,24 @@ def load_checkpoint(ckpt_path, config:Config):
   ckpt['optim'] = optim
   return ckpt
 
+def load_checkpoint_block(ckpt_path, config:Config):
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  ckpt = torch.load(ckpt_path, map_location=device)
+  # replace state_dict with actual object
+  num_model = len(ckpt['models'])
+  models = [0] * num_model
+  optims = [0] * num_model
+  for i in trange(num_model):
+    models[i] = config.get_model()
+    models[i].to(device)
+    optims[i] = config.get_optim(models[i])
+    models[i].load_state_dict(ckpt['models'][i])
+    optims[i].load_state_dict(ckpt['optims'][i])
+  ckpt['models'] = models
+  ckpt['optims'] = optims
+  return ckpt
+
+# load stat_dict for given model and optim
 def resume_checkpoint(ckpt_path, model, optim):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   ckpt = torch.load(ckpt_path, map_location=device)
@@ -66,6 +85,7 @@ def resume_checkpoint(ckpt_path, model, optim):
   optim.load_state_dict(ckpt['optim'])
   return ckpt['epoch']
 
+# load stat_dict for given models and optims
 def resume_checkpoint_block(ckpt_path, models, optims):
   assert len(models) == len(optims)
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -100,9 +120,10 @@ def main():
   batch_log_step = cfg_train['batch_log_step']
 
   # data
-  dataset_param = config.get_dataset_param()
-  # an item = a batch = a block
-  dataset = SphericalBlockDataset(**dataset_param)
+  # dataset_param = config.get_dataset_param()
+  # # an item = a batch = a block
+  # dataset = SphericalBlockDataset(**dataset_param)
+  dataset = config.get_dataset()
   train_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
   # val_split = config.config['dataset']['valid_split']
@@ -115,8 +136,9 @@ def main():
 
   # model, optim, loss
   log_dir = config.config['model']['log_dir']
-  model_param = config.get_model_param()
-  models = [ MLP(**model_param) for i in range(len(dataset)) ]
+  # model_param = config.get_model_param()
+  # models = [ MLP(**model_param) for i in range(len(dataset)) ]
+  models = [ config.get_model() for i in range(len(dataset)) ]
   optims = [ config.get_optim(model) for model in models ]
   lossl1 = nn.L1Loss()
   lossl2 = nn.MSELoss()

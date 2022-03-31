@@ -64,6 +64,28 @@ def evaluate(pred:np.ndarray, gt:np.ndarray, verbose=True):
 
   return vmae, vmse
 
+def reconstruct_blocks(models: list, dataset: SphericalBlockDataset):
+  num_block = len(dataset)
+  comp_pred_blocks = []
+  comp_blocks = []
+  phys_blocks = []
+  for bi in tqdm(range(num_block)):
+    phys = ds.curvs[bi][0]
+    phys_trans = ds.curvs[bi][1]
+    comp = ds.cart[bi][0]
+    comp_trans = ds.cart[bi][1]
+
+    model = models[bi]
+    model.eval()
+    with torch.no_grad():
+      comp_pred = model(phys).detach().cpu().numpy()
+    comp_pred = comp_trans.inverse_transform(comp_pred)
+    comp_pred_blocks.append(comp_pred)
+    comp_blocks.append(comp_trans.inverse_transform(comp))
+    phys_blocks.append(phys_trans.inverse_transform(phys))
+  return comp_pred_blocks, comp_blocks, phys_blocks
+    
+
 def main():
   args = parse_args()
   cfgObj = Config(args.testcfg)
