@@ -60,9 +60,13 @@ class GridBase {
 
   public:
     // xyzorder: order of axis. Ex: 
+    std::vector<int> xyzorder{0, 1, 2};
     GridBase() {}
     ~GridBase() {}
 
+    void setXYZOrder(int i, int j, int k) {
+      xyzorder = {i, j, k};
+    }
     virtual int getCellCount() = 0;
     virtual int getVtxCount() = 0;
     virtual int getDimCount() = 0;

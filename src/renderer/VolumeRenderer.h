@@ -27,13 +27,13 @@
 
 class Camera {
   public:
-    double r, azimuth, elevation;
+    float r, azimuth, elevation;
     glm::vec3 center;
 
     Camera() {}
 
-    void setAzimuth(double deg);
-    void setElevation(double deg);
+    void setAzimuth(float deg);
+    void setElevation(float deg);
     void setCenter(glm::vec3 coord);
 };
 
@@ -68,17 +68,17 @@ class Image: public Solution<glm::vec4> {
       return this->Solution::getDimensions();
     }
 
-    void setOpacity(size_t x, size_t y, double opacity) {
+    void setOpacity(size_t x, size_t y, float opacity) {
       this->Solution::setVal(x, y, glm::vec4(0.,0.,0.,opacity));
     }
-    void setRGBA(size_t x, size_t y, double r, double g, double b, double opacity) {
+    void setRGBA(size_t x, size_t y, float r, float g, float b, float opacity) {
       this->Solution::setVal(x, y, glm::vec4(r,g,b,opacity));
     }
-    void setRGB(size_t x, size_t y, double r, double g, double b) {
+    void setRGB(size_t x, size_t y, float r, float g, float b) {
       this->Solution::setVal(x, y, glm::vec4(r,g,b,1.));
     }
 
-    double getOpacity(size_t x, size_t y) {
+    float getOpacity(size_t x, size_t y) {
       return this->Solution::getVal(x, y).a;
     }
     glm::vec4 getRGBA(size_t x, size_t y) {
@@ -115,8 +115,8 @@ class Image: public Solution<glm::vec4> {
       }
       // printVec(std::max_element(this->data.begin(), this->data.end()));
       // std::cout << (int)std::max_element(img8bit.getData()->begin(), img8bit.getData()->end()) << "\n";
-      const unsigned char *imgArray = img8bit.getData();
-      stbi_write_png(fpath.c_str(), this->dims[0], this->dims[1], num_channel, imgArray, this->dims[0] * num_channel);
+      const std::vector<unsigned char> imgArray = img8bit.getData();
+      stbi_write_png(fpath.c_str(), this->dims[0], this->dims[1], num_channel, imgArray.data(), this->dims[0] * num_channel);
       std::cout << "image written to " << fpath << std::endl;
     }
 
@@ -146,8 +146,7 @@ class VolumeRenderer {
       SHADING_NONE=0, SHADING_PHONG=1
     };
 
-    Field<float> *field = nullptr;
-    Field<glm::vec3> *gradField = nullptr;
+    ScalarField<float> *field = nullptr;
     TransferFunction *tf = nullptr;
     Image img;
     Shading shading = this->SHADING_NONE;
@@ -205,12 +204,8 @@ class VolumeRenderer {
       this->tf = tf;
     }
 
-    void setField(Field<float> *field) {
+    void setField(ScalarField<float> *field) {
       this->field = field;
-    }
-
-    void setGradField(Field<glm::vec3> *gradField) {
-      this->gradField = gradField;
     }
 
     void setImageDimension(int width, int height) {
@@ -225,19 +220,19 @@ class VolumeRenderer {
     }
     // camera model?
     // glm::vec3 rayCorner
-    void render(glm::vec3 rayStep, int numDepths, int planeIdx[]) {
-      std::vector<std::vector<double>> fieldExtents = {
+    void render(glm::vec3 rayStep, int numDepths, std::vector<int> planeIdx) {
+      std::vector<std::vector<float>> fieldExtents{
         this->field->getDimExtent(0),
         this->field->getDimExtent(1),
         this->field->getDimExtent(2),
       };
 
-      double ustep = (fieldExtents[planeIdx[0]][1] - fieldExtents[planeIdx[0]][0]) / (img.getWidth()-1);
-      double vstep = (fieldExtents[planeIdx[1]][1] - fieldExtents[planeIdx[1]][0]) / (img.getHeight()-1);
+      float ustep = (fieldExtents[planeIdx[0]][1] - fieldExtents[planeIdx[0]][0]) / (img.getWidth()-1);
+      float vstep = (fieldExtents[planeIdx[1]][1] - fieldExtents[planeIdx[1]][0]) / (img.getHeight()-1);
 
-      double xmin = fieldExtents[0][0];
-      double ymin = fieldExtents[1][0];
-      double zmin = fieldExtents[2][0];
+      float xmin = fieldExtents[0][0];
+      float ymin = fieldExtents[1][0];
+      float zmin = fieldExtents[2][0];
       glm::vec3 rayCorner(xmin,ymin,zmin);
       // for every pixel/ray
       std::cout << "ray starts at corner";
@@ -257,7 +252,7 @@ class VolumeRenderer {
           for (int depth = 0; depth < numDepths; depth++) {
             // get current value, rgba
             if (!this->field->isBounded(ray.x, ray.y, ray.z)) break;
-            double intensity = this->field->getVal(ray.x, ray.y, ray.z);
+            float intensity = this->field->getVal(ray.x, ray.y, ray.z);
             glm::vec3 rgb = this->tf->getRGB(intensity);
             float opacity = this->tf->getOpacity(intensity);
 

@@ -1,10 +1,14 @@
 #ifndef SVK_COMMON_UTIL
 #define SVK_COMMON_UTIL
 
-#include <glm/glm.hpp>
 #include <vector>
 #include <string>
 #include <sstream>
+
+#include <glm/glm.hpp>
+#include <Eigen/Dense>
+
+using namespace Eigen;
 
 template <typename T>
 T product(std::vector<T> vec) {
@@ -42,6 +46,19 @@ void printVec( glm::vec3 vec )
 void printVec( glm::vec4 vec )
 {
 	printf("  %7.4f %7.4f %7.4f %7.4f\n", vec[0], vec[1], vec[2], vec[3] );
+}
+
+
+template <typename T=Vector3f>
+void swapVecDim(std::vector<Vector3f> &vecs, int idim, int jdim, int kdim) {
+  for (int i = 0; i < vecs.size(); i++) {
+    T thisvec = vecs[i];
+    T tmpvec = thisvec;
+    thisvec(0) = tmpvec(idim);
+    thisvec(1) = tmpvec(jdim);
+    thisvec(2) = tmpvec(kdim);
+    vecs[i] = thisvec;
+  }
 }
 
 #endif

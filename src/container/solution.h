@@ -9,6 +9,10 @@
 #include <string>
 #include <cerrno>
 #include <vector>
+
+#include <Eigen/Dense>
+using namespace Eigen;
+
 // #include <numeric>
 // #include <functional>
 
@@ -84,6 +88,27 @@ class Solution {
       this->length = product(dims);
       this->updateStrides();
     }
+
+    // for a vector solution, swap the data in two dimensions
+    void swapAxes(int idim, int jdim, int kdim) {
+      std::vector<int> tmpStrides(this->strides);
+      this->strides[0] = tmpStrides[idim];
+      this->strides[1] = tmpStrides[jdim];
+      this->strides[2] = tmpStrides[kdim];
+    }
+
+    void swapVecDim(int idim, int jdim, int kdim) {
+      // std::cout << this->data[0] << "\nvs\n";
+      for (int i = 0; i < this->length; i++) {
+        T thisvec = this->data[i];
+        T tmpvec = thisvec;
+        thisvec(0) = tmpvec(idim);
+        thisvec(1) = tmpvec(jdim);
+        thisvec(2) = tmpvec(kdim);
+        this->data[i] = thisvec;
+      }
+      // std::cout << this->data[0] << "\n";
+    }
     // std::vector<T> range() {}
 
     // ************************************************************************
@@ -106,13 +131,6 @@ class Solution {
     // initialize the Solution from vec
     void fromVec(const std::string& fpath, bool verbose=false) {
 
-      // try {
-      //   std::ifstream fdata(fpath, std::ios::binary);
-      // } catch (const std::ios_base::failure& fail) {
-      //   printf("File reading failed (%s):", fpath);
-      //   std::cout << fail.what() << '\n';
-      //   return;
-      // }
       std::ifstream fdata(fpath, std::ios::binary);
       if (fdata.fail()) {
         printf("File reading failed (%s): ", fpath.c_str());
@@ -201,7 +219,8 @@ class Solution {
       else if (zi == this->getDimLen(2)) zi -= 2;
 
       int i = this->index(xi, yi, zi);
-      // printf("index %i\n", i);
+      // printf("index %i - \n", i);
+      // std::cout << this->data[i] << "\n";
       return this->data[i];
     }
 
@@ -216,6 +235,7 @@ class Solution {
       int i = this->index(xi, yi);
       return this->data[i];
     }
+
     // Central Difference gradient approximation at the indices
     glm::vec3 getGrad(int xi, int yi, int zi) {
       glm::vec3 g;
@@ -225,6 +245,14 @@ class Solution {
       return g;
     }
 
+    // Central Difference gradient approximation at the indices
+    Matrix3Xf getJac(int xi, int yi, int zi) {
+      Matrix3Xf g(3, 3);
+      g.row(0) = (this->getVal(xi+1, yi, zi) - this->getVal(xi-1, yi, zi)) / 2.f;
+      g.row(1) = (this->getVal(xi, yi+1, zi) - this->getVal(xi, yi-1, zi)) / 2.f;
+      g.row(2) = (this->getVal(xi, yi, zi+1) - this->getVal(xi, yi, zi-1)) / 2.f;
+      return g;
+    }
 
     //		    6________7
     //		   /|       /|
@@ -280,9 +308,27 @@ class Solution {
       glm::vec3 g6 = this->getGrad(xi, yi+1, zi+1);
       glm::vec3 g7 = this->getGrad(xi+1, yi+1, zi+1);
       glm::vec3 p;
-      p[0] = trilerp(g0[0], g1[0], g2[0], g3[0], g4[0], g5[0], g6[0], g7[0], alpha, beta, gamma);
-      p[1] = trilerp(g0[1], g1[1], g2[1], g3[1], g4[1], g5[1], g6[1], g7[1], alpha, beta, gamma);
-      p[2] = trilerp(g0[2], g1[2], g2[2], g3[2], g4[2], g5[2], g6[2], g7[2], alpha, beta, gamma);
+      p = trilerp(g0, g1, g2, g3, g4, g5, g6, g7, alpha, beta, gamma);
+      // p[0] = trilerp(g0[0], g1[0], g2[0], g3[0], g4[0], g5[0], g6[0], g7[0], alpha, beta, gamma);
+      // p[1] = trilerp(g0[1], g1[1], g2[1], g3[1], g4[1], g5[1], g6[1], g7[1], alpha, beta, gamma);
+      // p[2] = trilerp(g0[2], g1[2], g2[2], g3[2], g4[2], g5[2], g6[2], g7[2], alpha, beta, gamma);
+      return p;
+    }
+
+    Matrix3f getJacLerp(int xi, int yi, int zi, float alpha, float beta, float gamma) {
+      Matrix3f g0 = this->getJac(xi, yi, zi);
+      Matrix3f g1 = this->getJac(xi+1, yi, zi);
+      Matrix3f g2 = this->getJac(xi, yi+1, zi);
+      Matrix3f g3 = this->getJac(xi+1, yi+1, zi);
+      Matrix3f g4 = this->getJac(xi, yi, zi+1);
+      Matrix3f g5 = this->getJac(xi+1, yi, zi+1);
+      Matrix3f g6 = this->getJac(xi, yi+1, zi+1);
+      Matrix3f g7 = this->getJac(xi+1, yi+1, zi+1);
+      Matrix3f p;
+      p = trilerp(g0, g1, g2, g3, g4, g5, g6, g7, alpha, beta, gamma);
+      // p[0] = trilerp(g0[0], g1[0], g2[0], g3[0], g4[0], g5[0], g6[0], g7[0], alpha, beta, gamma);
+      // p[1] = trilerp(g0[1], g1[1], g2[1], g3[1], g4[1], g5[1], g6[1], g7[1], alpha, beta, gamma);
+      // p[2] = trilerp(g0[2], g1[2], g2[2], g3[2], g4[2], g5[2], g6[2], g7[2], alpha, beta, gamma);
       return p;
     }
 

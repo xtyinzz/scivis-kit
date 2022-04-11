@@ -81,6 +81,9 @@ class CartesianGrid: public GridBase {
     int getDimLen(int idim) { return this->dims[idim].len; }
     float getDimSpacing(int idim) { return this->dims[idim].spacing; }
 
+    void swapAxes(int idim, int jdim, int kdim) {
+      
+    }
     // ************************************************************************
     // core functions
 
@@ -90,7 +93,11 @@ class CartesianGrid: public GridBase {
 
       std::vector<int> indices(3, 0);
       std::vector<float> weights(3, 0);
-      std::vector<float> location{ x, y, z };
+      // std::vector<float> tmplocation{ x,y,z };
+      std::vector<float> location{ x,y,z };
+      // location[0] = tmplocation[this->xyzorder[0]];
+      // location[1] = tmplocation[this->xyzorder[1]];
+      // location[2] = tmplocation[this->xyzorder[2]];
       float whole;
       for (int i = 0; i < 3; i++) {
         float index = (location[i] - this->dims[i].min) / this->dims[i].spacing;
@@ -130,6 +137,18 @@ class CartesianGrid: public GridBase {
                      (y >= this->dims[1].min && y <= this->dims[1].max) &&
                      (z >= this->dims[2].min && z <= this->dims[2].max);
       return bounded;
+    }
+
+    void rescale(float newmin, float newmax) {
+      this->dims[0].min = newmin;
+      this->dims[0].max = newmax;
+      this->dims[0].spacing = (newmax - newmin) / (this->dims[0].len - 1);
+      this->dims[1].min = newmin;
+      this->dims[1].max = newmax;
+      this->dims[1].spacing = (newmax - newmin) / (this->dims[1].len - 1);
+      this->dims[2].min = newmin;
+      this->dims[2].max = newmax;
+      this->dims[2].spacing = (newmax - newmin) / (this->dims[2].len - 1);
     }
 };
 /*

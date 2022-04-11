@@ -1,63 +1,36 @@
 #ifndef SVK_CONTAINER_FIELD_H
 #define SVK_CONTAINER_FIELD_H
 
-// #include "grid.h"
 #include "grid_base.h"
 #include "grid_cartesian.h"
-// #include "grid_base.h"
-// #include "grid_base.h"
 #include "solution.h"
-
-
-#include <glm/glm.hpp>
-// #include <Eigen/Dense>
+#include "common/numerical.h"
 
 #include <omp.h>
 
+#include <glm/glm.hpp>
+#include <Eigen/Dense>
+
+using namespace Eigen;
+
 template <typename T=float>
-class Field {
+class FieldBase {
   public:
     // GridBase *g = NULL;
     // Solution<T> *s = NULL;
     GridBase *g = nullptr;
     Solution<T>*s = nullptr;
-    Solution<glm::vec3> *grad = nullptr;
 
-    bool hasGrad = false;
+    FieldBase() {}
+    FieldBase(GridBase *g): g(g) {}
+    FieldBase(Solution<T> *s): g(s) {}
+    FieldBase(GridBase *g, Solution<T> *s): g(g), s(s) {} 
 
-    Field() {}
-    // $$$$$$$$$$$$$$$$$ CAN'T INITIALIZE G&S and point to it b/c scope. IF NEEDED, REFACTORATION NEEDED.
-    // Field(float xmin, float xmax, float ymin,
-    //       float ymax, float zmin, float zmax,
-    //       float xspacing=1., float yspacing=1., float zspacing=1.) {
-    //   GridBase gtmp(xmin, xmax, ymin, ymax, zmin, zmax, xspacing, yspacing, zspacing);
-    //   Solution<T> stmp(gtmp.dimLength(0), gtmp.dimLength(1), gtmp.dimLength(2));
-    //   std::cout << gtmp.dimLength(0) << " " << gtmp.dimLength(1) << " " << gtmp.dimLength(2) << "\n";
-
-    //   this->g = &gtmp;
-    //   this->s = &stmp;
-    // }
-    // Field(int xdim, int ydim, int zdim) {
-    //   GridBase gtmp(xdim, ydim, zdim);
-    //   Solution<T> stmp(gtmp.dimLength(0), gtmp.dimLength(1), gtmp.dimLength(2));
-
-    //   this->g = &gtmp;
-    //   this->s = &stmp;
-    // }
-    
-    Field(GridBase *g): g(g) {}
-    Field(Solution<T> *s): g(s) {}
-    Field(GridBase *g, Solution<T> *s): g(g), s(s) {} 
-    ~Field() { 
-      delete this->grad;
-     }
 
     GridBase *grid() { return this->g; }
     Solution<T> *solution() { return this->s; }
     void setGrid(GridBase *g) { this->g = g; }
     void setSolution(Solution<T> *s) { this->s = s; }
-    void setGradSolution(Solution<glm::vec3> *grad) { this->grad = grad; }
-
 
     // get extents
     std::vector<float> getDimExtent(int idim) {
@@ -80,13 +53,62 @@ class Field {
     // get value at location
     // CAN BE OVERRIDE AS ANALYTICAL
     virtual T getVal(float x, float y, float z) {
+      if (! this->isBounded(x, y, z)) {
+        return T(0);
+      }
       CellLerp cl = this->g->getVoxelLerp(x, y, z);
       // std::cout << "\n\n"<< cl.indices[0] <<"-"<<cl.indices[1]<<"-"<<cl.indices[2] <<"\n" << x << "-" << y << "-" << z << "\n";
       // std::cout << cl.weights[0] <<"-"<<cl.weights[1]<<"-"<<cl.weights[2] << "\n";
+
+      // out of bound
+      // if (cl.indices[0] == -1) return NULL;
       return this->s->getValLerp(cl.indices[0], cl.indices[1], cl.indices[2],
                                   cl.weights[0], cl.weights[1], cl.weights[2]);
     }
+  
+    T getValByIndex(int xi, int yi, int zi) {
+      return this->s->getVal(xi, yi, zi);
+    }
+    T getValByIndex(int xi, int yi) {
+      return this->s->getVal(xi, yi);
+    }
+};
+
+template <typename T=float>
+class ScalarField: public FieldBase<T> {
+  public:
+    Solution<glm::vec3> *grad = nullptr;
+    bool hasGrad = false;
+
+    ScalarField() {}
+    // $$$$$$$$$$$$$$$$$ CAN'T INITIALIZE G&S and point to it b/c scope. IF NEEDED, REFACTORATION NEEDED.
+    // Field(float xmin, float xmax, float ymin,
+    //       float ymax, float zmin, float zmax,
+    //       float xspacing=1., float yspacing=1., float zspacing=1.) {
+    //   GridBase gtmp(xmin, xmax, ymin, ymax, zmin, zmax, xspacing, yspacing, zspacing);
+    //   Solution<T> stmp(gtmp.dimLength(0), gtmp.dimLength(1), gtmp.dimLength(2));
+    //   std::cout << gtmp.dimLength(0) << " " << gtmp.dimLength(1) << " " << gtmp.dimLength(2) << "\n";
+
+    //   this->g = &gtmp;
+    //   this->s = &stmp;
+    // }
+    // Field(int xdim, int ydim, int zdim) {
+    //   GridBase gtmp(xdim, ydim, zdim);
+    //   Solution<T> stmp(gtmp.dimLength(0), gtmp.dimLength(1), gtmp.dimLength(2));
+
+    //   this->g = &gtmp;
+    //   this->s = &stmp;
+    // }
     
+    ScalarField(GridBase *g): FieldBase<T>(g) {}
+    ScalarField(Solution<T> *s): FieldBase<T>(s) {}
+    ScalarField(GridBase *g, Solution<T> *s): FieldBase<T>(g, s) {} 
+    ~ScalarField() { 
+      delete this->grad;
+     }
+    void setGradSolution(Solution<glm::vec3> *grad) { this->grad = grad; }
+
+
     // get gradient at location
     // CAN BE OVERRIDE AS ANALYTICAL
     virtual glm::vec3 getGrad(float x, float y, float z) {
@@ -103,13 +125,6 @@ class Field {
       CellLerp cl = this->g->getVoxelLerp(x, y, z);
       return this->grad->getValLerp(cl.indices[0], cl.indices[1], cl.indices[2],
                                   cl.weights[0], cl.weights[1], cl.weights[2]);
-    }
-
-    T getValByIndex(int xi, int yi, int zi) {
-      return this->s->getVal(xi, yi, zi);
-    }
-    T getValByIndex(int xi, int yi) {
-      return this->s->getVal(xi, yi);
     }
 
     void computeGradSolution3D() {
@@ -129,13 +144,134 @@ class Field {
       }
       this->hasGrad = true;
     }
-    
+
+    std::vector<T> getMinMax() {
+      std::vector<T> scalarSol = this->s->getData();
+      return std::vector<T>{
+        *min_element(scalarSol.begin(), scalarSol.end()),
+        *max_element(scalarSol.begin(), scalarSol.end())
+      };
+    }
+};
+
+
+template <typename T=Array3f>
+class VectorField : public FieldBase<T> {
+  public:
+    Solution<Matrix3f> *jacSol = nullptr;
+    Solution<Vector3f> *vortSol = nullptr;
+    Solution<float> *vortMagSol = nullptr;
+
+    VectorField() {};
+    VectorField(GridBase *g, Solution<T> *s): FieldBase<T>(g, s) {}
+    ~VectorField() { 
+      delete this->jacSol;
+      delete this->vortSol;
+      delete this->vortMagSol;
+     }
+
+  std::vector<T> particleTracingRK1(T seed, float stepsize, int maxstep) {
+    std::vector<T> traces;
+    traces.push_back(seed);
+    for (int i = 0; i < maxstep; i++) {
+      seed = seed + stepsize*(this->getVal(seed[0], seed[1], seed[2]).array());
+      // exit if out of bound
+      if (!this->isBounded(seed[0], seed[1], seed[2]))
+        break;
+      traces.push_back(seed);
+    }
+    return traces;
+  }
+
+  void computeJac3D() {
+    this->jacSol = new Solution<Matrix3f>(
+      this->getDimLen(0), this->getDimLen(1), this->getDimLen(2)
+    );
+    #pragma omp parallel for collapse(3)
+    for (int i = 0; i < this->getDimLen(0); i++) {
+      for (int j = 0; j < this->getDimLen(1); j++) {
+        for (int k = 0; k < this->getDimLen(2); k++) {
+          Matrix3f jacobian = this->s->getJac(i, j, k);
+          this->jacSol->setVal(i, j, k, jacobian);
+        }
+      }
+    }
+  }
+
+  void computeVort3D() {
+    this->vortSol = new Solution<Vector3f>(
+      this->getDimLen(0), this->getDimLen(1), this->getDimLen(2)
+    );
+    #pragma omp parallel for collapse(3)
+    for (int i = 0; i < this->getDimLen(0); i++) {
+      for (int j = 0; j < this->getDimLen(1); j++) {
+        for (int k = 0; k < this->getDimLen(2); k++) {
+          Matrix3f jacobian = this->jacSol->getVal(i, j, k);
+          Vector3f vorticity = {
+            jacobian(2, 1) - jacobian(1, 2),
+            jacobian(0, 2) - jacobian(2, 0),
+            jacobian(1, 0) - jacobian(0, 1)
+          };
+          this->vortSol->setVal(i, j, k, vorticity);
+        }
+      }
+    }
+  }
+
+  void computeVortMag() {
+    this->vortMagSol = new Solution<float>(
+      this->getDimLen(0), this->getDimLen(1), this->getDimLen(2)
+    );
+    #pragma omp parallel for collapse(3)
+    for (int i = 0; i < this->getDimLen(0); i++) {
+      for (int j = 0; j < this->getDimLen(1); j++) {
+        for (int k = 0; k < this->getDimLen(2); k++) {
+          Vector3f vort = this->vortSol->getVal(i, j, k);
+          this->vortMagSol->setVal(i, j, k, vort.norm());
+        }
+      }
+    }
+  }
+
+  // get gradient at location
+  // CAN BE OVERRIDE AS ANALYTICAL
+  Matrix3f getJac(float x, float y, float z) {
+    CellLerp cl = this->g->getVoxelLerp(x, y, z);
+    if (this->jacSol != nullptr) {
+      return this->jacSol->getValLerp(cl.indices[0], cl.indices[1], cl.indices[2],
+                                              cl.weights[0], cl.weights[1], cl.weights[2]);
+    }
+    return this->s->getJacLerp(cl.indices[0], cl.indices[1], cl.indices[2],
+                                cl.weights[0], cl.weights[1], cl.weights[2]);
+  }
+
+  Vector3f getVort(float x, float y, float z) {
+    CellLerp cl = this->g->getVoxelLerp(x, y, z);
+    if (this->vortSol != nullptr) {
+      return this->vortSol->getValLerp(cl.indices[0], cl.indices[1], cl.indices[2],
+                                              cl.weights[0], cl.weights[1], cl.weights[2]);
+    }
+    Matrix3f jac = getJac(x, y, z);
+    return calcVort(jac);
+  }
+
+  float getVortMag(float x, float y, float z) {
+    CellLerp cl = this->g->getVoxelLerp(x, y, z);
+    if (this->vortMagSol != nullptr) {
+      return this->vortMagSol->getValLerp(cl.indices[0], cl.indices[1], cl.indices[2],
+                                              cl.weights[0], cl.weights[1], cl.weights[2]);
+    }
+    Vector3f vort = getVort(x, y, z);
+    return vort.norm();
+  }
+
+
 };
 
 
 
 template <typename T=float>
-class HeartEquation: public Field<T> {
+class HeartEquation: public ScalarField<T> {
   public:
     float a, b;
 

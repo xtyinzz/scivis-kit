@@ -1,17 +1,23 @@
 #ifndef SVK_COMMON_NUMERICAL
 #define SVK_COMMON_NUMERICAL
 
+// #include "container/field.h"
 #include <Eigen/Dense>
 #include <vector>
 #include <cmath>
+#include <iostream>
 #include <type_traits>
 #define EPS 1e-8
+
 using namespace Eigen;
+
+////////////////////////////////// Interpolation ///////////////////////////////
+
 
 //		  ________
 //		0        1
 template <typename T>
-T lerp(T v0, T v1, T alpha) {
+inline T lerp(T v0, T v1, T alpha) {
   T p = (1-alpha)*v0 + v1*alpha;
   return p;
 }
@@ -20,14 +26,14 @@ T lerp(T v0, T v1, T alpha) {
 //		0        1
 
 template <typename T>
-T lerpGLM(float x, float x0, float x1, T v0, T v1) {
+inline T lerpGLM(float x, float x0, float x1, T v0, T v1) {
   float alpha = (x-x0) / (x1 - x0);
   T p = (1-alpha)*v0 + v1*alpha;
   return p;
 }
 
 template <typename T>
-T lerp(float x, float x0, float x1, T v0, T v1) {
+inline T lerp(float x, float x0, float x1, T v0, T v1) {
   float alpha = (x-x0) / (x1 - x0);
   T p = (1-alpha)*v0 + v1*alpha;
   return p;
@@ -39,7 +45,7 @@ T lerp(float x, float x0, float x1, T v0, T v1) {
 //		 /________/
 //		0        1
 template <typename T>
-T bilerp(T v0, T v1, T v2, T v3, T alpha, T beta) {
+inline T bilerp(T v0, T v1, T v2, T v3, T alpha, T beta) {
   T p = (1-alpha)*(1-beta)*v0 + 
         alpha*(1-beta)*v1 + 
         (1-alpha)*beta*v2 + 
@@ -58,7 +64,7 @@ T bilerp(T v0, T v1, T v2, T v3, T alpha, T beta) {
   //		|/_______|/
   //		0        1
 template <typename T>
-T trilerp(T v0, T v1, T v2, T v3, T v4, T v5, T v6, T v7,
+inline T trilerp(T v0, T v1, T v2, T v3, T v4, T v5, T v6, T v7,
           float alpha, float beta, float gamma) {
   T p = (1-alpha)*(1-beta)*(1-gamma)*v0 + 
         alpha*(1-beta)*(1-gamma)*v1 + 
@@ -68,6 +74,7 @@ T trilerp(T v0, T v1, T v2, T v3, T v4, T v5, T v6, T v7,
         alpha*(1-beta)*gamma*v5 + 
         (1-alpha)*beta*gamma*v6 +
         alpha*beta*gamma*v7;
+  // std::cout << "TRILERP:\n" << v0 << "\n**\n**\n" << v1<<"\n**\n**\n" <<v2<<"\n**\n**\n" <<v3<<"\n**\n**\n" <<v4<<"\n**\n**\n" <<v5<<"\n**\n**\n" <<v6<<"\n**\n**\n" <<v7<< "\nRESUlt\n" << p << "\n";
   return p;
 }
 
@@ -135,7 +142,7 @@ std::vector<std::vector<T>> trilerpSysEqCoeff(const Array3<REAL> &coord, const A
 }
 
 template <typename T, typename REAL>
-T trilerpSysEq(REAL x, REAL y, REAL z, std::vector<T> coeff) {
+inline T trilerpSysEq(REAL x, REAL y, REAL z, std::vector<T> coeff) {
   return (coeff[0] + coeff[1]*x + coeff[2]*y + coeff[3]*z +
           coeff[4]*x*y + coeff[5]*x*z + coeff[6]*y*z + coeff[7]*x*y*z);
 }
@@ -206,6 +213,9 @@ T trilerpSysEq(REAL x, REAL y, REAL z, std::vector<T> coeff) {
 // }
 
 
+////////////////////////////////// Precision & Error Tolerance ///////////////////////////////
+
+
 inline bool isClose(float a, float b, double atol=1.48e-8, double rtol=0.0) {
   return abs(a-b) < (atol + rtol*b);
 }
@@ -228,7 +238,7 @@ inline bool allClose(const Array3<T> &a, const Array3<T> &b, double atol=1.48e-8
 }
 
 template <typename T>
-T closeRound(T a, T b, double atol=1.48e-8, double rtol=0.0) {
+inline T closeRound(T a, T b, double atol=1.48e-8, double rtol=0.0) {
   T result = a;
   if (isClose(a, b, atol, rtol)) {
     result = b;
@@ -237,7 +247,7 @@ T closeRound(T a, T b, double atol=1.48e-8, double rtol=0.0) {
 }
 
 template <typename T>
-T trigApprox(T (*trigFunc)(T), T val, double atol=1.48e-8, double rtol=0.0) {
+inline T trigApprox(T (*trigFunc)(T), T val, double atol=1.48e-8, double rtol=0.0) {
   T result = trigFunc(val);
   result = closeRound(result, (T)0., atol, rtol);
   result = closeRound(result, (T)1., atol, rtol);
@@ -246,18 +256,78 @@ T trigApprox(T (*trigFunc)(T), T val, double atol=1.48e-8, double rtol=0.0) {
 }
 
 template <typename T>
-T radians(T deg) {
+inline T radians(T deg) {
   return deg * M_PI / 180.;
 }
 
 template <typename T>
-Array3<T> sph2car(T r, T theta, T phi) {
+inline Array3<T> sph2car(T r, T theta, T phi) {
   Array3<T> sph{
     r*trigApprox(std::sin, phi)*trigApprox(std::cos, theta),
     r*trigApprox(std::sin, phi)*trigApprox(std::sin, theta),
     r*trigApprox(std::cos, phi)
   };
   return sph;
+}
+
+////////////////////////////////// Particle Tracing ///////////////////////////////
+
+
+// forward declare VectorField for particle tracing methods
+template <typename T>
+class VectorField;
+
+template <typename T, typename VecT>
+std::vector<Array3<T>> particleTracingRK1(Array3<T> seed, VectorField<VecT> *vecField, double stepsize, int maxstep) {
+  std::vector<Array3<T>> traces;
+  traces.push_back(seed);
+  for (int i = 0; i < maxstep; i++) {
+    seed += stepsize*(vecField->getVal(seed[0], seed[1], seed[2]).array());
+    // exit if out of bound
+    if (!vecField->isBounded(seed[0], seed[1], seed[2]))
+      break;
+    traces.push_back(seed);
+  }
+  return traces;
+}
+
+template <typename T, typename VecT>
+std::vector<Array3<T>> particleTracingRK4(Array3<T> seed, VectorField<VecT> *vecField, double stepsize, int maxstep) {
+  std::vector<Array3<T>> traces;
+  traces.push_back(seed);
+  for (int i = 0; i < maxstep; i++) {
+    Array3<T> k1 = vecField->getVal(seed[0], seed[1], seed[2]).array();
+    // if (k1 == NULL) break;
+    Array3<T> k1_pos = seed + 0.5*stepsize*k1;
+
+    Array3<T> k2 = vecField->getVal(k1_pos[0], k1_pos[1], k1_pos[2]).array();
+    // if (k2 == NULL) break;
+    Array3<T> k2_pos = seed + 0.5*stepsize*k2;
+
+    Array3<T> k3 = vecField->getVal(k2_pos[0], k2_pos[1], k2_pos[2]).array();
+    // if (k3 == NULL) break;
+    Array3<T> k3_pos = seed + stepsize*k3;
+
+    Array3<T> k4 = vecField->getVal(k3_pos[0], k3_pos[1], k3_pos[2]).array();
+    // if (k4 == NULL) break;
+
+    seed = seed + stepsize*(k1 + 2*k2 + 2*k3 + k4)/6.;
+    // exit if out of bound
+    if (!vecField->isBounded(seed[0], seed[1], seed[2]))
+      break;
+    traces.push_back(seed);
+  }
+  return traces;
+}
+
+template <typename T>
+Vector3<T> calcVort(const Matrix3<T> &jacobian) {
+  Vector3f vorticity = {
+    jacobian(2, 1) - jacobian(1, 2),
+    jacobian(0, 2) - jacobian(2, 0),
+    jacobian(1, 0) - jacobian(0, 1)
+  };
+  return vorticity;
 }
 
 #endif

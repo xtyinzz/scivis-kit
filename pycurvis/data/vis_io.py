@@ -145,6 +145,28 @@ def vtk_arange(*args):
     arr.InsertNextValue(i)
   return arr
 
+def get_vtp_polyline(sl_coords: np.array, sllens: np.array):
+  vtp = vtk.vtkPolyData()
+  points = vtk.vtkPoints()
+  points.SetData(numpy_support.numpy_to_vtk(sl_coords))
+  vtp.SetPoints(points)
+  vtkCells = vtk.vtkCellArray()
+  curr_len = 0
+  for sllen in sllens:
+    polyLine = vtk.vtkPolyLine()
+    polyLine.GetPointIds().SetNumberOfIds(sllen)
+    for i in range(sllen):
+      polyLine.GetPointIds().SetId(i, curr_len+i)
+    curr_len += sllen
+    vtkCells.InsertNextCell(polyLine)
+  vtp.SetLines(vtkCells)
+
+def write_vtp(fpath, vtp):
+  writer = vtk.vtkXMLPolyDataWriter()
+  writer.SetFileName(fpath)
+  writer.SetInputData(vtp)
+  writer.Write()
+
 # return vtkFloatArray holding data like np.linspace(args)
 def vtk_linspace(*args):
   arr = vtk.vtkFloatArray()

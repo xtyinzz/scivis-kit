@@ -1,0 +1,54 @@
+environment:
+  Ubuntu 20.04.3 LTS
+  gcc 9.4.0
+  cmake >= 3.2
+  OpenMP
+
+  Additional Requirement for tests:
+    lab3 (Particle Tracing):
+      python 3.8
+        - numpy
+        - matplotlib
+
+
+Output Images:
+  Task 1 & 2:
+    img/tracers_rk1.png
+    img/tracers_rk4.png
+  Task 3:
+    img/vortMagVR_01_256x2_256of0.400000step.png
+    img/vortMagVR_02_256x2_256of0.400000step.png
+    img/vortMagVR_12_256x2_256of0.400000step.png
+  Task 4:
+    img/tornado96_hedgehog.png
+    img/tornado96_vmagVR.png
+    img/tornado96_particleTracing.png
+
+
+Running Tests/Labs:
+
+  1. mkdir data/
+  2. copy "tornadoPC_96.vec" and "seeds.txt" to data/
+  // task 1-2
+  3. bin/task1_2 && python3 vis.py
+  // task 3
+  4. bin/task3 256 256 0
+      // rendering 3 256x256 images with 256 ray steps without PHONG shading
+  // task 4
+  5. bin/task4
+      // vector field data will be written to data/task4Vec.raw
+      // In paraview, please load with ImageReader and:
+      // Data Scalar Type: float
+      // Data Byte Order: LittleEndian (or your machine's)
+      // Number of Scalar Components: 3
+      // Data Extent: 0-95
+      //              0-95
+      //              0-95
+      // Then proceed and do Glyph, StreamTracer, and Volume Rendering as you need.
+
+
+  // IMPORTANT NOTE: If encounters Segmentation Fault, might be the threads in OpenMP didn't get enough stack size.
+  //                 Try unlock the thread stack size limit by command "ulimit -s unlimited.
+
+
+If any issues arise, please let me know. Thank you!
