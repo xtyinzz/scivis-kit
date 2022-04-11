@@ -26,6 +26,14 @@ Output Images:
 
 
 Running Tests/Labs:
+  
+
+  0. In project root directory:
+    0.1 mkdir build
+    0.2 cd build
+    0.3 cmake ..
+    0.4 make
+    0.5 cd ../test/lab3
 
   1. mkdir data/
   2. copy "tornadoPC_96.vec" and "seeds.txt" to data/
