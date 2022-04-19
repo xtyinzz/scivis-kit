@@ -87,9 +87,6 @@ class CurvilinearGrid: public GridBase {
       // 1. locate the cell
       std::vector<int> indices = this->getVoxel(x, y, z);
       std::vector<int> voxelIndices = this->getVoxel(x, y, z);
-      std::vector<Array3f> compVoxelCoords = this->compGrid->getVoxelCoords(
-        voxelIndices[0], voxelIndices[1], voxelIndices[2]
-      );
       std::vector<Array3f> voxelCoords = this->getVoxelCoords(
         voxelIndices[0], voxelIndices[1], voxelIndices[2]
       );
@@ -98,18 +95,20 @@ class CurvilinearGrid: public GridBase {
       // 2. find comp
       // newton's method
       Array3f comp = this->phys2comp_newtwon(
-        phys, compVoxelCoords[0], compVoxelCoords[7], voxelCoords,
-        this->newton.maxiter, this->newton.atol, this->newton.rtol
+        phys, voxelCoords, this->newton.maxiter, this->newton.atol, this->newton.rtol
       );
+      std::vector<float> weights(comp.data(), comp.size());
       // 3. trilinear interpolate in comp grid
-      return this->compGrid->getVoxelLerp(comp[0], comp[1], comp[2]);
+      return CellLerpg{voxelIndices, weights};
     }
 
 
-    Array3f phys2comp_newtwon(const Array3f &phys, const Array3f &lowVtx, const Array3f &highVtx, std::vector<Array3f> physVoxelCoord,
+    Array3f phys2comp_newtwon(const Array3f &phys, std::vector<Array3f> physVoxelCoord,
     int maxiter=50, float atol=1.48e-8, float rtol=0.0) {
-      Array3f init_comp = (lowVtx + highVtx) / 2.;
-      Array3f comp = init_comp;
+      // Array3f init_comp = (lowVtx + highVtx) / 2.;
+      Array3f comp{.5f, .5f, .5f};
+      Array3f lowVtx{0.f, 0.f, 0.f};
+      Array3f highVtx{1.f, 1.f, 1.f};
       // std::cout << init_comp << "\n";
       // Array3f goal_diff{0., 0., 0.};
       for(int i = 0; i < maxiter; i++) {

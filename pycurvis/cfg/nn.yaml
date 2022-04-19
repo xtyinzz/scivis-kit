@@ -29,7 +29,7 @@ model: {
 dataset: {
   type: 'mantle_coord',
   param: {
-    data_path: "../data/earth_nopole.npy",
+    data_path: "data/earth_nopole.npy",
     curv_idx: [0,1,2],
     cart_idx: [3,4,5],
   },

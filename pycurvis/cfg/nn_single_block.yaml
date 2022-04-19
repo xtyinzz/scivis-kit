@@ -59,13 +59,13 @@ dataset: {
 # 2^21: 2097152
 # 2^22: 4194304
 train: {
-  max_epoch: 1500,
+  max_epoch: 2500,
   batch: 1048576,
   # batch_log_step: step between batch number to save model
   batch_log_step: 9999999999,
   # log_step: step between epoch number to save model
   log_step: 10,
   resume: {
-    ckpt: ckpt_499_000_1.56e-04,
+    ckpt: ckpt_1498_000_1.67e-05,
   }
 }

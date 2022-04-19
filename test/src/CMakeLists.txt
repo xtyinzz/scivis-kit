@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
-project(srcTest)
+project(lab2)
 
 # set exec path
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
