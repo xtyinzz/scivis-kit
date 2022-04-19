@@ -65,13 +65,12 @@ def evaluate(pred:np.ndarray, gt:np.ndarray, verbose=True):
   return vmae, vmse
 
 def reconstruct(model: nn.Module, dataset: SphericalDataset):
-  dataloader = DataLoader(dataset, dataset.nbatch, shuffle=False)
+  dataloader = DataLoader(dataset, batch_size=dataset.nbatch, shuffle=False)
 
   comp_preds = []
   comp_trans = dataset.outpp
   phys_trans = dataset.inpp
-  for bi, phys in tqdm(enumerate(dataloader)):
-    
+  for bi, (phys, comp) in tqdm(enumerate(dataloader)):
     model.eval()
     device = next(model.parameters()).device
     with torch.no_grad():
@@ -81,7 +80,7 @@ def reconstruct(model: nn.Module, dataset: SphericalDataset):
     comp_pred = comp_trans.inverse_transform(comp_pred)
     comp_preds.append(comp_pred)
 
-  comp_preds = np.concatenate(comp_preds).reshape(dataset.dims)
+  comp_preds = np.concatenate(comp_preds).reshape(*dataset.dims, 3)
   print("prediction shape:", comp_preds.shape)
   return comp_preds, dataset.curv, dataset.cart
 
@@ -115,13 +114,14 @@ def main():
   testcfg = Config(args.testcfg)
   nncfg = Config(args.nncfg)
   # get model
-  ckpt = load_checkpoint_block(testcfg.config['model_path'], nncfg)
-  models = ckpt['models']
+  ckpt = load_checkpoint(testcfg.config['model_path'], nncfg)
+  model = ckpt['model']
+  print("deivce:", next(model.parameters()).device)
 
   # get data
   # dataset = SphericalBlockDataset(**nncfg.get_dataset_param())
   dataset = nncfg.get_dataset()
-  dataset.nbatch = nncfg['train']['batch']
+  dataset.nbatch = nncfg.config['train']['batch']
   # nbatch = nncfg.config['train']['batch']
   # dataloader = DataLoader(dataset, batch_size=nbatch, shuffle=False)
   # train_sampler, val_dataset = train_val(dataset, .2)
@@ -129,9 +129,7 @@ def main():
   #                                           sampler=train_sampler)
   # valid_loader = DataLoader(val_dataset, batch_size=nbatch, shuffle=False)
 
-
-
-  comp_preds, comps, physs = reconstruct(models, dataset)
+  comp_preds, comps, physs = reconstruct(model, dataset)
   maes, mses = evaluate(comp_preds, comps, verbose=True)
 
   phys2comp_single_eval = {
@@ -140,11 +138,11 @@ def main():
     'mse': mses,
   }
 
-  torch.save(phys2comp_single_eval, 'eval/phys2comp_single_eval.pk')
+  torch.save(phys2comp_single_eval, 'eval/phys2comp_single_eval_mlp.pk')
 
-  comp_diff = np.abs(comp_preds - comp_preds)
-  diff_field = get_vts(dataset.dims, physs, vector_fields={"comp_diff": comp_diff})
-  write_vts("eval/earth_comp_diff_field.vts")
+  comp_diff = np.abs(comp_preds - comps)
+  diff_field_vts = get_vts(dataset.dims, physs, vector_fields={"comp_diff": comp_diff})
+  write_vts("eval/earth_comp_diff_field_mlp.vts", diff_field_vts)
 
   # # write data
   # out_dir = testcfg['out_dir']

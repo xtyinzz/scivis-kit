@@ -15,7 +15,8 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 #              ${CMAKE_COMPILER_IS_GNUCXX}")
 # endif()
 set(CMAKE_CXX_STANDARD 17)
-# set(CMAKE_CXX_FLAGS "-O1")
+set(CMAKE_CXX_FLAGS "-O1")
+# set(CMAKE_CXX_FLAGS "-O0")
 
 
 

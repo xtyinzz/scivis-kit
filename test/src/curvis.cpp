@@ -69,7 +69,8 @@ int main() {
 
   auto start = std::chrono::high_resolution_clock::now();
   Array3f compEst;
-  for (int i = 0; i < 100; i++ ) {
+  int num_iter = 2000;
+  for (int i = 0; i < num_iter; i++ ) {
     compEst = curvi.phys2comp_newtwon(physQuery, low_vtx, high_vtx, phys, 50);
   }
   std::cout << "Newton estimated comp: \n" <<compEst << "\n";

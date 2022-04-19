@@ -126,6 +126,10 @@ def main():
 
   torch.save(phys2comp_eval, 'eval/phys2comp_eval.pk')
 
+  comp_diff = np.abs(comp_preds - comps)
+  diff_field_vts = get_vts(dataset.dims, physs, vector_fields={"comp_diff": comp_diff})
+  write_vts("eval/earth_comp_diff_field.vts", diff_field_vts)
+
   # # write data
   # out_dir = testcfg['out_dir']
   # vis_out_dir = testcfg['vis_out_dir']
