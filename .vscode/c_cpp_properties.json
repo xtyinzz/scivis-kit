@@ -7,6 +7,7 @@
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/src"
             ],
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "defines": [],
             "compilerPath": "/apps/gnu/8.4.0/bin/gcc",
             "cStandard": "gnu17",
@@ -18,9 +19,10 @@
             "name": "WSL",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/include",
-                "${workspaceFolder}/src"
+                // "${workspaceFolder}/include",
+                // "${workspaceFolder}/src"
             ],
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "defines": [
                 "_DEBUG",
                 "UNICODE",

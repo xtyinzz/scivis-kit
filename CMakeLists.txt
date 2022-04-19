@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.2)
 
 # Set the project name
 project(scivis)
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 # if(CMAKE_CXX_COMPILER_LOADED)

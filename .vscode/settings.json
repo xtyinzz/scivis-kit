@@ -76,7 +76,9 @@
     "typeindex": "cpp",
     "valarray": "cpp",
     "variant": "cpp",
-    "*.ipp": "cpp"
+    "*.ipp": "cpp",
+    "dense": "cpp",
+    "core": "cpp"
   },
   "C_Cpp.errorSquiggles": "Enabled"
 }

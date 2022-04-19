@@ -22,9 +22,29 @@ set_target_properties(scivis PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(scivis INTERFACE ${LINK_HEADER_LIBS})
 
 
-find_package(OpenMP)
+find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(scivis PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+find_package(VTK REQUIRED COMPONENTS
+  CommonColor
+  CommonCore
+  CommonDataModel
+  FiltersCore
+)
+if(VTK_FOUND)
+  # message(-status, "111111111111111${VTK_USE_FILE}")
+  # message(-status, "111111111111111${VTK_INCLUDE_DIR}")
+  # message(-status, "111111111111111${VTK_LIBRARIES}")
+  target_include_directories(scivis PUBLIC ${VTK_INCLUDE_DIR})
+  target_link_libraries(scivis PUBLIC ${VTK_LIBRARIES})
+  vtk_module_autoinit(
+    TARGETS scivis
+    MODULES ${VTK_LIBRARIES}
+  )
 endif()
 
 target_include_directories(scivis PUBLIC "$ENV{NETCDF}/include")
