@@ -99,7 +99,7 @@ class CurvilinearGrid: public GridBase {
       );
       std::vector<float> weights(comp.data(), comp.size());
       // 3. trilinear interpolate in comp grid
-      return CellLerp{voxelIndices, weights};
+      return CellLerpg{voxelIndices, weights};
     }
 
 
