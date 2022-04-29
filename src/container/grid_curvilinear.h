@@ -6,13 +6,18 @@
 #include "grid_rectlinear.h"
 #include "solution.h"
 #include "common/numerical.h"
+#include "common/util.h"
 #include <assert.h>
 #include <iostream>
 #include <string>
 #include <cmath>
-#include <assert.h>
 #include <vector>
+
 #include <Eigen/Dense>
+#include <vtkStructuredGrid.h>
+#include <vtkStaticCellLocator.h>
+#include <vtkCellLocator.h>
+#include <vtkXMLStructuredGridReader.h>
 
 using namespace Eigen;
 
@@ -34,6 +39,14 @@ class CurvilinearGrid: public GridBase {
     RectlinearGrid *compGrid;
     Solution<Vector3f> coords;
     Array<float, 3, 2> bbox;
+    vtkStructuredGrid *physGrid;
+    int iorder[8] = {0, 1, 1, 0,  0, 1, 1, 0};
+    int jorder[8] = {0, 0, 1, 1,  0, 0, 1, 1};
+    int korder[8] = {0, 0, 0, 0,  1, 1, 1, 1};
+    float bounds[6];
+    // vtkNew<vtkStructuredGrid> physGrid;
+    int *physGridDim;
+    int strides[3];
     // cell count, vertex count
     int ccount = 0;
     int vcount = 0;
@@ -54,6 +67,34 @@ class CurvilinearGrid: public GridBase {
       // ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
     }
 
+    // void constructStructuedGrid(int dims[3], vtkPoints *points) {
+    //   this->physGrid->SetDimensions(dims);
+    //   this->physGrid->SetPoints(points);
+    //   this->physGridDim = this->physGrid->GetDimensions();
+    // }
+
+    // void readStructuredGrid(const std::string &filename) {
+    //   vtkNew<vtkXMLStructuredGridReader> sgr;
+    //   sgr->SetFileName(filename.c_str());
+    //   sgr->Update();
+    //   this->physGrid = sgr->GetOutput();
+    //   this->physGridDim = this->physGrid->GetDimensions();
+    //   this->strides[0] = 1;
+    //   this->strides[1] = this->physGridDim[0];
+    //   this->strides[2] = this->physGridDim[0]*this->physGridDim[1];
+    // }
+    void setVTKStructuredGrid(vtkStructuredGrid *sg) {
+      this->physGrid = sg;
+      this->physGridDim = this->physGrid->GetDimensions();
+      this->strides[0] = 1;
+      this->strides[1] = this->physGridDim[0];
+      this->strides[2] = this->physGridDim[0]*this->physGridDim[1];
+      
+      double *dbounds = this->physGrid->GetBounds();
+      for (int i = 0; i < 6; i++) {
+        this->bounds[i] = (float)dbounds[i];
+      }
+    }
 
     // TODO
     void updateCounts() {
@@ -66,7 +107,7 @@ class CurvilinearGrid: public GridBase {
     int getDimCount() { return this->dims.size(); } // what's return "dimensions of the grid" in hw write-up?
 
     std::vector<float> getDomain(int idim) {
-      return { this->dims[idim].min, this->dims[idim].max };
+      return std::vector<float>{bounds[2*idim], bounds[2*idim + 1]};
     }
 
     int getDimLen(int idim) { return this->dims[idim].len; }
@@ -78,39 +119,102 @@ class CurvilinearGrid: public GridBase {
       this->compGrid = compGrid;
     }
 
+    std::vector<int> vtkGetIJK(vtkIdType pid) {
+      int k = pid / this->strides[2];
+      pid -= k*this->strides[2];
+      int j = pid / this->strides[1];
+      pid -= j*this->strides[1];
+      int i = (int)pid;
+      // printf("%d %d %d\n", i, j, k);
+      return std::vector<int> {i, j, k};
+    }
+
     // phys2comp
     // Given phys coord, output cell indices and comp space lerp weights by Newton's Method
     // return floor corner x,y,z index and lerp weights on x,y,z
     virtual CellLerp getVoxelLerp(float x, float y, float z) {
-      assert(this->isBounded(x,y,z));
-
+      // assert(this->isBounded(x,y,z));
       // 1. locate the cell
-      std::vector<int> indices = this->getVoxel(x, y, z);
-      std::vector<int> voxelIndices = this->getVoxel(x, y, z);
-      std::vector<Array3f> voxelCoords = this->getVoxelCoords(
-        voxelIndices[0], voxelIndices[1], voxelIndices[2]
-      );
-      Array3f phys{ x, y, z };
+      double physDouble[3] = {(double)x, (double)y, (double)z};
+      // printf("%f\n", physDouble[0]);
+      vtkNew<vtkGenericCell> tmpGCell;
+      double pcoord[3];
+      double vtkweights[8];
+      int subid;
+      this->physGrid->FindCell(physDouble, NULL, tmpGCell, 0, 1e-3, subid, pcoord, vtkweights);
+      // if no cell found, return 0 weights, so getVal in field return 0 value
+      if (tmpGCell->GetNumberOfPoints() == 0) {
+        return CellLerp{std::vector<int>{0,0,0}, std::vector<float>{0., 0., 0.}};
+      }
+      // what's the cell get point heuristic?
+      vtkIdList *pointIDs = tmpGCell->GetPointIds();
+      vtkIdType cornerPID = pointIDs->GetId(0);
+      // get voxel coords in vtk point order in cell 
+      std::vector<Array3f> voxelCoords;
+      voxelCoords.resize(8);
+      for (int i = 0; i < 8; i++) {
+        double *coord = this->physGrid->GetPoint(pointIDs->GetId(i));
+        Array3f physf;
+        physf[0] = (float)coord[0];
+        physf[1] = (float)coord[1];
+        physf[2] = (float)coord[2];
+        voxelCoords[i] = physf;
+        // std::cout << "\n" << pointIDs->GetId(i) << "\n";
+      }
+      // vtk cell point order different than scivis-kit assumption
+      swapElement(voxelCoords, 2, 3);
+      swapElement(voxelCoords, 6, 7);
+
+      // double physDouble[3] = { (double)x, (double)y, (double)z };
+      // double pcoord[3];
+      // double vtkweights[8];
+      // int subid;
+      // vtkIdType cid = this->physGrid->FindCell(physDouble, NULL, 0, 0, subid, pcoord, vtkweights);
+      // // if no cell found, return 0 weights, so getVal in field return 0 value
+      // if (cid == -1) {
+      //   return CellLerp{std::vector<int>{0, 0, 0}, std::vector<float>{0., 0., 0.}};
+      // }
+      // // get voxel coords in vtk point order in cell 
+      // std::vector<Array3f> voxelCoords;
+      // voxelCoords.resize(8);
+      // for (int i = 0; i < 8; i++) {
+      //   vtkIdType tmppid = cid + iorder[i]*strides[0] + jorder[i]*strides[1] + korder[i]*strides[2];
+      //   double *coord = this->physGrid->GetPoint(tmppid);
+      //   Array3f physf;
+      //   physf[0] = (float)coord[0];
+      //   physf[1] = (float)coord[1];
+      //   physf[2] = (float)coord[2];
+      //   voxelCoords[i] = physf;
+      //   // std::cout << "\n" << physf << "\n";
+      // }
+      // vtk cell point order different than scivis-kit assumption
+      // swapElement(voxelCoords, 2, 3);
+      // swapElement(voxelCoords, 6, 7);
+
+
 
       // 2. find comp
       // newton's method
+      Array3f phys{ x, y, z };
       Array3f comp = this->phys2comp_newtwon(
         phys, voxelCoords, this->newton.maxiter, this->newton.atol, this->newton.rtol
       );
-      std::vector<float> weights(comp.data(), comp.size());
+      std::vector<float> weights = { comp(0), comp(1), comp(2) };
+      std::vector<int> ijk = vtkGetIJK(cornerPID);
       // 3. trilinear interpolate in comp grid
-      return CellLerpg{voxelIndices, weights};
+      return CellLerp{ ijk, weights };
     }
 
 
     Array3f phys2comp_newtwon(const Array3f &phys, std::vector<Array3f> physVoxelCoord,
-    int maxiter=50, float atol=1.48e-8, float rtol=0.0) {
+    int maxiter=10, float atol=1.48e-4, float rtol=0.0) {
       // Array3f init_comp = (lowVtx + highVtx) / 2.;
       Array3f comp{.5f, .5f, .5f};
       Array3f lowVtx{0.f, 0.f, 0.f};
       Array3f highVtx{1.f, 1.f, 1.f};
       // std::cout << init_comp << "\n";
       // Array3f goal_diff{0., 0., 0.};
+      
       for(int i = 0; i < maxiter; i++) {
         std::vector<std::vector<Array3f>> coeff = trilerpSysEqCoeff(comp, lowVtx, highVtx, physVoxelCoord);
 
@@ -124,7 +228,7 @@ class CurvilinearGrid: public GridBase {
         // std::cout << "My Inv \n" << jac_inv << "\n\n";
         Array3f new_comp = comp - (jac_inv * diff_funcval).array();
         // std::cout << "My Inv \n" << jac_inv <<  "  --  " << diff_funcval << "\n\n";
-        // std::cout << "phys_est: " << phys_est << "comp: " << new_comp << "error: " << abs(diff_funcval.array()) << "\n";
+        // std::cout << "phys_est: \n" << phys_est << "\ncomp: \n" << new_comp << "\nerror: \n" << abs(diff_funcval.array()) << "\n";
         
         if (allClose(comp, new_comp, rtol, atol)) {
           return new_comp;
@@ -182,7 +286,7 @@ class CurvilinearGrid: public GridBase {
         }
       };
       // std::cout << "My Inv \n" << jac <<"\n" <<  inv <<  "  --  " << det << "\n\n";
-      return inv / det;
+      return inv / -det;
     }
 
     //		    6________7  high-vtx

@@ -78,7 +78,12 @@
     "variant": "cpp",
     "*.ipp": "cpp",
     "dense": "cpp",
-    "core": "cpp"
+    "core": "cpp",
+    "*.in": "cpp",
+    "unordered_set": "cpp",
+    "regex": "cpp",
+    "shared_mutex": "cpp",
+    "*.txx": "cpp"
   },
   "C_Cpp.errorSquiggles": "Enabled"
 }

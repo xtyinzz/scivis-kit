@@ -29,11 +29,16 @@ endif()
 
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+execute_process (
+    COMMAND bash -c "export VTK_DIR=/home/xiong336/libs/vtk/build/"
+    OUTPUT_VARIABLE outVar
+)
 find_package(VTK REQUIRED COMPONENTS
   CommonColor
   CommonCore
   CommonDataModel
   FiltersCore
+  IOXML
 )
 if(VTK_FOUND)
   # message(-status, "111111111111111${VTK_USE_FILE}")
