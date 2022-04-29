@@ -11,6 +11,13 @@
 using namespace Eigen;
 
 template <typename T>
+void swapElement(std::vector<T> &arr, int i, int j) {
+  T tmp = arr[i];
+  arr[i] = arr[j];
+  arr[j] = tmp;
+}
+
+template <typename T>
 T product(std::vector<T> vec) {
   T prod = 1;
   for(std::size_t i = 0; i < vec.size(); i++) {

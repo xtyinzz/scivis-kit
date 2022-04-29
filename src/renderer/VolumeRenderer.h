@@ -251,11 +251,16 @@ class VolumeRenderer {
           float opacityOut = 0;
           for (int depth = 0; depth < numDepths; depth++) {
             // get current value, rgba
-            if (!this->field->isBounded(ray.x, ray.y, ray.z)) break;
+            // if (!this->field->isBounded(ray.x, ray.y, ray.z)) break;
             float intensity = this->field->getVal(ray.x, ray.y, ray.z);
-            glm::vec3 rgb = this->tf->getRGB(intensity);
-            float opacity = this->tf->getOpacity(intensity);
-
+            // std::cout << intensity << "\n";
+            glm::vec3 rgb(0);
+            float opacity = 0;
+            if (intensity <= this->field->minmax[1] && intensity >= this->field->minmax[0]) {
+              rgb = this->tf->getRGB(intensity);
+              opacity = this->tf->getOpacity(intensity);
+            }
+            
             // std::cout << intensity << " -> rgba ";
             // printVec(glm::vec4(cOut, opacityOut));
 

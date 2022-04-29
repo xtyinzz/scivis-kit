@@ -53,10 +53,11 @@ class FieldBase {
     // get value at location
     // CAN BE OVERRIDE AS ANALYTICAL
     virtual T getVal(float x, float y, float z) {
-      if (! this->isBounded(x, y, z)) {
-        return T(0);
-      }
+      // if (!this->isBounded(x, y, z)) {
+      //   return T(0);
+      // }
       CellLerp cl = this->g->getVoxelLerp(x, y, z);
+      if (cl.weights[0] == 0.f && cl.weights[1] == 0.f && cl.weights[2] == 0.f) return T(0);
       // std::cout << "\n\n"<< cl.indices[0] <<"-"<<cl.indices[1]<<"-"<<cl.indices[2] <<"\n" << x << "-" << y << "-" << z << "\n";
       // std::cout << cl.weights[0] <<"-"<<cl.weights[1]<<"-"<<cl.weights[2] << "\n";
 
@@ -78,6 +79,7 @@ template <typename T=float>
 class ScalarField: public FieldBase<T> {
   public:
     Solution<glm::vec3> *grad = nullptr;
+    std::vector<T> minmax;
     bool hasGrad = false;
 
     ScalarField() {}
@@ -102,7 +104,9 @@ class ScalarField: public FieldBase<T> {
     
     ScalarField(GridBase *g): FieldBase<T>(g) {}
     ScalarField(Solution<T> *s): FieldBase<T>(s) {}
-    ScalarField(GridBase *g, Solution<T> *s): FieldBase<T>(g, s) {} 
+    ScalarField(GridBase *g, Solution<T> *s): FieldBase<T>(g, s) {
+      minmax = getMinMax();
+    } 
     ~ScalarField() { 
       delete this->grad;
      }
