@@ -8,6 +8,8 @@ from tqdm import tqdm, trange
 from util.utils import report_gpumem, cpuStats
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.pipeline import Pipeline
+import vtk
+from vtkmodules.util import numpy_support
 
 def minmax_scale(x, new_min=-1., new_max=1.):
   x_max, x_min = [x.max(1, keepdim=True)[0], x.min(1, keepdim=True)[0]]
@@ -186,6 +188,50 @@ class Pipeline1D(Pipeline):
     X = X.reshape(-1, 1)
     X = super()._inverse_transform(X)
     return X.reshape(x_shape)
+
+class Phys2CompDataset(Dataset):
+  def __init__(self, data_path, intrans=None, outtrans=None):
+    self.data_path = data_path
+    vtkSGR = vtk.vtkXMLStructuredGridReader()
+    vtkSGR.SetFileName(data_path)
+    vtkSGR.Update()
+    vtkSG = vtkSGR.GetOutput()
+    # get dimension and swap xyz order to zyx
+    self.dims = np.array(vtkSG.GetDimensions())
+    tmp = self.dims[0]
+    self.dims[0] = self.dims[2]
+    self.dims[2] = tmp
+    # get phys mesh
+    self.phys = numpy_support.vtk_to_numpy(vtkSG.GetPoints().GetData())
+    # get comp mesh - regular grid
+    self.phys = self.phys.reshape([*self.dims, 3])
+    z,y,x = np.meshgrid(
+      np.linspace(0, 1, self.dims[0]),
+      np.linspace(0, 1, self.dims[1]),
+      np.linspace(0, 1, self.dims[2]),
+      indexing="ij"
+    )
+    self.comp = np.concatenate([z[...,None], y[...,None], x[...,None]], axis=-1)
+    # preprocessing
+    self.phys_prep = torch.Tensor(self.phys.reshape(-1, 3))
+    self.comp_prep = torch.Tensor(self.comp.reshape(-1, 3))
+
+    if intrans is not None:
+      print("transforming inputs")
+      self.phys_prep, self.inpp = fitTransPipeline(self.phys.reshape(-1, 3))
+      self.phys_prep = torch.Tensor(self.phys_prep)
+    
+    if outtrans is not None:
+      print("transforming outputs")
+      self.comp_prep, self.outpp = fitTransPipeline(self.comp.reshape(-1, 3))
+      self.comp_prep = torch.Tensor(self.comp_prep)
+
+  def __len__(self):
+    return len(self.phys_prep)
+
+  def __getitem__(self, idx):
+    return self.phys_prep[idx], self.comp_prep[idx]
+
 
 '''
     data_dir: "../data/",

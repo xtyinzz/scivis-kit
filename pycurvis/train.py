@@ -19,7 +19,7 @@ TODO:
 
 def save_checkpoint(model, optim, epoch, batch, loss, log_dir):
   loss_str = f'{float(loss):.2e}'
-  pckpt = os.path.join(log_dir, f'ckpt_{epoch:03}_{batch:03}_{loss_str}')
+  pckpt = os.path.join(log_dir, f'ckpt_{epoch:04}_{batch:04}_{loss_str}')
   torch.save({
               'model' : model.state_dict(),
               'optim' : optim.state_dict(),
@@ -33,7 +33,7 @@ def save_checkpoint(model, optim, epoch, batch, loss, log_dir):
 
 def save_checkpoint_block(models, optims, epoch, batch, loss, log_dir):
   loss_str = f'{float(loss):.2e}'
-  pckpt = os.path.join(log_dir, f'ckpt_{epoch:03}_{batch:03}_{loss_str}')
+  pckpt = os.path.join(log_dir, f'ckpt_{epoch:04}_{batch:03}_{loss_str}')
   torch.save({
               'models' : [model.state_dict() for model in models],
               'optims' : [optim.state_dict() for optim in optims],

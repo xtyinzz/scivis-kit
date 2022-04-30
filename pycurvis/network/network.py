@@ -62,7 +62,7 @@ class MLP(nn.Module):
       )
     # final layer with Tanh
     self.net.append(
-      LinearLayer(hidden_dims[-1], out_dim, act_fn=nn.Tanh())
+      LinearLayer(hidden_dims[-1], out_dim, act_fn=nn.Sigmoid())
     )
     
     self.net = nn.Sequential(*self.net)
