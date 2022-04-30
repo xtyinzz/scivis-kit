@@ -218,6 +218,104 @@ class VolumeRenderer {
     void writePNG(const std::string& fpath, int num_channel=3) {
       this->img.writePNG(fpath, num_channel);
     }
+
+    void render(std::vector<std::vector<glm::vec3>> rays, int numSteps) {
+      int imgW = this->img.getWidth();
+      int imgH = this->img.getHeight();
+      std::cout << "ray starts at corner";
+      printVec(rays[0][0]);
+
+      #pragma omp parallel for collapse(2)
+      for (size_t u=0; u < imgW; u++) {
+        for (size_t v=0; v < imgH; v++) {
+
+          glm::vec3 cIn(0.f);
+          glm::vec3 cOut(0.f);
+          float opacityIn = 0;
+          float opacityOut = 0;
+
+          int rayIdx = v + u*imgH;
+          for (int depth = 0; depth < numSteps; depth++) {
+            glm::vec3 ray = rays[rayIdx][depth];
+            // get current value, rgba
+            // if (!this->field->isBounded(ray.x, ray.y, ray.z)) break;
+            float intensity = this->field->getVal(ray.x, ray.y, ray.z);
+            // std::cout << intensity << "\n";
+            glm::vec3 rgb(0);
+            float opacity = 0;
+            if (intensity <= this->field->minmax[1] && intensity >= this->field->minmax[0]) {
+              rgb = this->tf->getRGB(intensity);
+              opacity = this->tf->getOpacity(intensity);
+            }
+          
+            // front-back compositing
+            cOut = cIn + rgb*opacity*(1-opacityIn);
+            opacityOut = opacityIn + opacity*(1-opacityIn);
+
+            // Early Ray Termination
+            if (opacityOut > 0.9999) {
+              // printf("Early Ray Termination at Pixel (%-3zu, %-3zu)", u, v);
+              // printf(". RBGA:");
+              // printVec(glm::vec4(cOut, opacityOut));
+              break;
+            }
+
+            cIn = cOut;
+            opacityIn = opacityOut;
+          }
+          // printf("Pixel (%-3zu, %-3zu): ", u, v);
+          // printVec(glm::vec4(cOut, opacityOut));
+          this->img.setRGBA(u, v, cOut.r, cOut.g, cOut.b, opacityOut);
+
+          // if (this->img.format == this->img.RGBA) {
+          //   this->img.setRGBA(u, v, cOut.r, cOut.g, cOut.b, opacityOut);
+          // } else if (this->img.format == this->img.RGB) {
+          //   this->img.setRGB(u, v, cOut.r, cOut.g, cOut.b);
+          // }
+        }
+      }
+      std::cout << "ray ends at corner";
+      std::vector<glm::vec3> lastRay = rays[rays.size()-1];
+      printVec(lastRay[lastRay.size()-1]);
+    }
+
+    std::vector<std::vector<glm::vec3>> getRays(glm::vec3 rayStep, int numDepths, std::vector<int> planeIdx) {
+      std::vector<std::vector<float>> fieldExtents{
+        this->field->getDimExtent(0),
+        this->field->getDimExtent(1),
+        this->field->getDimExtent(2),
+      };
+
+      float ustep = (fieldExtents[planeIdx[0]][1] - fieldExtents[planeIdx[0]][0]) / (img.getWidth()-1);
+      float vstep = (fieldExtents[planeIdx[1]][1] - fieldExtents[planeIdx[1]][0]) / (img.getHeight()-1);
+
+      float xmin = fieldExtents[0][0];
+      float ymin = fieldExtents[1][0];
+      float zmin = fieldExtents[2][0];
+      glm::vec3 rayCorner(xmin,ymin,zmin);
+      // for every pixel/ray
+      int imgW = this->img.getWidth();
+      int imgH = this->img.getHeight();
+
+      std::vector<std::vector<glm::vec3>> raysSTL(imgW*imgH);
+      for (size_t u=0; u < imgW; u++) {
+        for (size_t v=0; v < imgH; v++) {
+          std::vector<glm::vec3> raySTL(numDepths);
+          glm::vec3 ray(rayCorner);
+          ray[planeIdx[0]] += u*ustep;
+          ray[planeIdx[1]] += v*vstep;
+          for (int depth = 0; depth < numDepths; depth++) {
+            raySTL[depth] = glm::vec3(ray);
+            ray += rayStep;
+          }
+          int rayIdx = v + u*imgH;
+          raysSTL[rayIdx] = raySTL;
+        }
+      }
+      return raysSTL;
+
+    }
+
     // camera model?
     // glm::vec3 rayCorner
     void render(glm::vec3 rayStep, int numDepths, std::vector<int> planeIdx) {
