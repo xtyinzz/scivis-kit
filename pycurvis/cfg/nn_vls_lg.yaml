@@ -13,7 +13,7 @@ model: {
   type: 'mlp_pe',
   param: {
     in_dim: 3,
-    hidden_dims: [64, 64, 64, 64],
+    hidden_dims: [32, 64, 128, 128, 64, 32],
     out_dim: 3,
     pe_dim: 16,
   },
@@ -48,13 +48,13 @@ dataset: {
 # 2^21: 2097152
 # 2^22: 4194304
 train: {
-  max_epoch: 1000,
+  max_epoch: 10000,
   batch: 524288,
   # batch_log_step: step between batch number to save model
   batch_log_step: 50,
   # log_step: step between epoch number to save model
   log_step: 50,
   resume: {
-    ckpt: 0,
+    ckpt: ckpt_0999_-001_8.29e-05,
   }
 }

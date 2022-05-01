@@ -18,5 +18,8 @@ foreach (test_file ${SOURCE_FILES})
   add_executable(${fname} ${test_file})
   target_link_libraries(${fname} scivis)
   target_link_libraries(${fname} ${TORCH_LIBRARIES})
+<<<<<<< Updated upstream
   target_include_directories(${fname} INTERFACE ${TORCH_INCLUDE_DIRS})
+=======
+>>>>>>> Stashed changes
 endforeach (test_file)

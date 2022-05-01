@@ -55,6 +55,6 @@ train: {
   # log_step: step between epoch number to save model
   log_step: 100,
   resume: {
-    ckpt: ckpt_0999_-01_3.07e-02,
+    ckpt: ckpt_3299_-001_1.92e-05,
   }
 }

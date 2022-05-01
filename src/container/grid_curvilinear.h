@@ -486,6 +486,7 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
       std::cout << physRaysTensor.sizes() << "\n";
       std::vector<torch::jit::IValue> inputs;
       inputs.push_back(physRaysTensor);
+<<<<<<< Updated upstream
       torch::Tensor compRaysTensor;
       {
         torch::NoGradGuard no_grad;
@@ -493,6 +494,9 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
       }
 
 
+=======
+      torch::Tensor compRaysTensor = this->network.forward(inputs).toTensor();
+>>>>>>> Stashed changes
 
       int dims[3] = {(int)physRays.size(), (int)physRays[0].size(), 3};
       compRaysTensor = compRaysTensor.reshape({dims[0], dims[1], dims[2]});
