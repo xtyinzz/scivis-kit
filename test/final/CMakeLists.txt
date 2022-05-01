@@ -6,7 +6,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 # message(-status, ${PROJECT_SOURCE_DIR}, ${SRC_DIR}, ${INCLUDE_DIR})
 
 file(GLOB SOURCE_FILES "torchTest.cpp")
-set(SOURCE_FILES ${SOURCE_FILES} "render_neural.cpp")
+set(SOURCE_FILES ${SOURCE_FILES} "render_neural.cpp" "render.cpp")
 
 
 find_package(Torch REQUIRED HINTS "/home/xiong336/libs/libtorch")

@@ -31,9 +31,9 @@ int main(int argc, char *argv[]) {
 
   // build grid
   CartesianGrid cg(
-    0, 1, dims[0],
+    0, 1, dims[2],
     0, 1, dims[1],
-    0, 1, dims[2]
+    0, 1, dims[0]
   );
 
   // build solution

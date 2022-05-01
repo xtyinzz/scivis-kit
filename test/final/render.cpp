@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
   vr.setImageDimension(imgWidth, imgWidth);
 
   std::vector<std::vector<int>> planeIndices{
-    {0, 1}
-    // {1, 2},
-    // {0, 2}
+    {0, 1},
+    {1, 2},
+    {0, 2}
   };
 
   for (const std::vector<int> &planeIdx : planeIndices) {
