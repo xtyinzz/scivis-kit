@@ -20,10 +20,7 @@
 #include <Eigen/Dense>
 using namespace Eigen;
 
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 int main(int argc, char *argv[]) {
   // *************** Data ****************
   vtkNew<vtkXMLStructuredGridReader> sgr;
@@ -41,10 +38,8 @@ int main(int argc, char *argv[]) {
 
   // build solution
   vtkPointData *pd = sg->GetPointData();
-<<<<<<< Updated upstream
+
   std::cout << pd->GetNumberOfArrays() << "\n";
-=======
->>>>>>> Stashed changes
   vtkDataArray *thetaVTK = pd->GetArray(0);
   std::vector<float> thetaData(thetaVTK->GetNumberOfTuples());
   for (int i = 0; i < thetaData.size(); i++) {
