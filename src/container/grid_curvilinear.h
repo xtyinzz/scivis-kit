@@ -488,6 +488,7 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
       inputs.push_back(physRaysTensor);
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       torch::Tensor compRaysTensor;
       {
         torch::NoGradGuard no_grad;
@@ -495,6 +496,9 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
       }
 
 
+=======
+      torch::Tensor compRaysTensor = this->network.forward(inputs).toTensor();
+>>>>>>> Stashed changes
 =======
       torch::Tensor compRaysTensor = this->network.forward(inputs).toTensor();
 >>>>>>> Stashed changes

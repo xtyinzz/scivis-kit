@@ -20,7 +20,10 @@ foreach (test_file ${SOURCE_FILES})
   target_link_libraries(${fname} ${TORCH_LIBRARIES})
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   target_include_directories(${fname} INTERFACE ${TORCH_INCLUDE_DIRS})
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
