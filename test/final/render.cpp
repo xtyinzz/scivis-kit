@@ -91,13 +91,13 @@ int main(int argc, char *argv[]) {
     int depth = sf.getDimExtent(0)[1] - sf.getDimExtent(0)[0];
 
     glm::vec3 rayStep(0.f);
-    // float steplen = 0.4;
-    // int numSteps = (int) (depth / steplen + 0.5);
-    // rayStep[depthPlaneIdx] = steplen;
-
-    int numSteps = imgWidth*2;
-    float steplen = depth / numSteps;
+    float steplen = 1;
+    int numSteps = (int) (depth / steplen + 0.5);
     rayStep[depthPlaneIdx] = steplen;
+
+    // int numSteps = imgWidth*2;
+    // float steplen = depth / numSteps;
+    // rayStep[depthPlaneIdx] = steplen;
     // numSteps = std::atoi(argv[2]);
 
     vr.render(rayStep, numSteps, planeIdx);
