@@ -20,7 +20,6 @@
 #include <Eigen/Dense>
 using namespace Eigen;
 
-
 int main(int argc, char *argv[]) {
   // *************** Data ****************
   vtkNew<vtkXMLStructuredGridReader> sgr;
@@ -38,6 +37,7 @@ int main(int argc, char *argv[]) {
 
   // build solution
   vtkPointData *pd = sg->GetPointData();
+  std::cout << pd->GetNumberOfArrays() << "\n";
   vtkDataArray *thetaVTK = pd->GetArray(0);
   std::vector<float> thetaData(thetaVTK->GetNumberOfTuples());
   for (int i = 0; i < thetaData.size(); i++) {

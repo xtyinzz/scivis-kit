@@ -29,11 +29,11 @@ endif()
 
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
-execute_process (
-    COMMAND bash -c "export VTK_DIR=/home/xiong336/libs/vtk/build/"
-    OUTPUT_VARIABLE outVar
-)
-find_package(VTK REQUIRED COMPONENTS
+# execute_process (
+#     COMMAND bash -c "export VTK_DIR=/home/xiong336/libs/vtk/build/"
+#     OUTPUT_VARIABLE outVar
+# )
+find_package(VTK REQUIRED HINTS "$ENV{HOME}/libs/vtk/build" COMPONENTS
   CommonColor
   CommonCore
   CommonDataModel
