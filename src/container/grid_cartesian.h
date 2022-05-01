@@ -47,6 +47,21 @@ class CartesianGrid: public GridBase {
 
     // xyzorder: order of axis. Ex: 
     CartesianGrid() {}
+
+    CartesianGrid(float xmin, float xmax, int xlen, float ymin,
+         float ymax, int ylen, float zmin, float zmax, int zlen) {
+      float xspacing = (xmax - xmin) / (xlen-1);
+      float yspacing = (ymax - ymin) / (ylen-1);
+      float zspacing = (zmax - zmin) / (zlen-1);
+      this->dims.resize(3);
+      this->dims[0] = DimPropertyCartesian(xmin, xmax, xspacing);
+      this->dims[1] = DimPropertyCartesian(ymin, ymax, yspacing);
+      this->dims[2] = DimPropertyCartesian(zmin, zmax, zspacing);
+
+      vcount = this->dims[0].len * this->dims[1].len * this->dims[2].len;
+      ccount = (this->dims[0].len - 1) * (this->dims[1].len - 1) * (this->dims[2].len - 1);
+    }
+
     // Constructor 1: specific dim min max spacing
     CartesianGrid(float xmin, float xmax, float ymin,
          float ymax, float zmin, float zmax,

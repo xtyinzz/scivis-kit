@@ -158,7 +158,7 @@ class StandScaler():
 def fitTransPipeline(x: np.ndarray):
   pp = Pipeline1D([
     ('stand', StandardScaler()),
-    ('norm', MinMaxScaler((-1, 1))),
+    ('norm', MinMaxScaler((0, 1))),
   ])
   x_shape = x.shape
   x = pp.fit_transform(x)
@@ -190,7 +190,7 @@ class Pipeline1D(Pipeline):
     return X.reshape(x_shape)
 
 class Phys2CompDataset(Dataset):
-  def __init__(self, data_path, intrans=None, outtrans=None):
+  def __init__(self, data_path, intrans=fitTransPipeline, outtrans=None):
     self.data_path = data_path
     vtkSGR = vtk.vtkXMLStructuredGridReader()
     vtkSGR.SetFileName(data_path)

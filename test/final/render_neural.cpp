@@ -26,12 +26,15 @@ int main(int argc, char *argv[]) {
   vtkNew<vtkXMLStructuredGridReader> sgr;
   sgr->SetFileName("data/bc80-45000-down.vts");
   sgr->Update();
+  vtkStructuredGrid *sg = sgr->GetOutput();
+  int *dims = sg->GetDimensions();
 
   // build grid
-  vtkStructuredGrid *sg = sgr->GetOutput();
-  std::cout << sg->GetNumberOfPoints() << "\n";
-  CurvilinearGrid curvGrid;
-  curvGrid.setVTKStructuredGrid(sg);
+  CartesianGrid cg(
+    0, 1, dims[2],
+    0, 1, dims[1],
+    0, 1, dims[0]
+  );
 
   // build solution
   vtkPointData *pd = sg->GetPointData();
@@ -41,12 +44,12 @@ int main(int argc, char *argv[]) {
     thetaData[i] = (float) thetaVTK->GetTuple(i)[0];
   }
   Solution<float> thetaSol(3);
-  thetaSol.setDimLen(0, curvGrid.physGridDim[2]);
-  thetaSol.setDimLen(1, curvGrid.physGridDim[1]);
-  thetaSol.setDimLen(2, curvGrid.physGridDim[0]);
+  thetaSol.setDimLen(0, dims[2]);
+  thetaSol.setDimLen(1, dims[1]);
+  thetaSol.setDimLen(2, dims[0]);
   thetaSol.setData(thetaData);
   // get scalar field
-  ScalarField sf(&curvGrid, &thetaSol);
+  ScalarField sf(&cg, &thetaSol);
 
   // *************** VR ****************
   
@@ -78,10 +81,14 @@ int main(int argc, char *argv[]) {
   int imgWidth = std::atoi(argv[1]);
   vr.setImageDimension(imgWidth, imgWidth);
 
+
+  std::string networkPath = "pytorch/traced_2499_1.pt";
+  NeuralCurvilinearGrid neuralCG(networkPath);
+
   std::vector<std::vector<int>> planeIndices{
-    {0, 1},
-    {1, 2},
-    {0, 2}
+    {0, 1}
+    // {1, 2},
+    // {0, 2}
   };
 
   for (const std::vector<int> &planeIdx : planeIndices) {
@@ -100,8 +107,12 @@ int main(int argc, char *argv[]) {
     rayStep[depthPlaneIdx] = steplen;
     // numSteps = std::atoi(argv[2]);
 
-    vr.render(rayStep, numSteps, planeIdx);
-    std::string imageName = "img/bc80-450000-thetaVR_" + std::to_string(planeIdx[0]) + std::to_string(planeIdx[1]) + 
+    std::cout << "W/H/Depth: " << imgWidth << "/" << imgWidth << "/" << numSteps << "\n";
+    std::vector<std::vector<glm::vec3>> physRays = vr.getRays(rayStep, numSteps, planeIdx);
+    std::vector<std::vector<glm::vec3>> compRays = neuralCG.precomputeRayCompCoords(physRays);
+
+    vr.render(compRays, numSteps);
+    std::string imageName = "img/neural-thetaVR_" + std::to_string(planeIdx[0]) + std::to_string(planeIdx[1]) + 
                             "_" + std::to_string(imgWidth) + "x2_" + 
                             std::to_string(numSteps) + "of" + std::to_string(steplen) + "step" + ".png";
     vr.writePNG(imageName, 3);

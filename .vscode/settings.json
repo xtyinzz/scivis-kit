@@ -83,7 +83,8 @@
     "unordered_set": "cpp",
     "regex": "cpp",
     "shared_mutex": "cpp",
-    "*.txx": "cpp"
+    "*.txx": "cpp",
+    "forward_list": "cpp"
   },
   "C_Cpp.errorSquiggles": "Enabled"
 }

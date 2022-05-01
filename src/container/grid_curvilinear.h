@@ -13,6 +13,7 @@
 #include <cmath>
 #include <vector>
 
+#include <torch/script.h>
 #include <Eigen/Dense>
 #include <vtkStructuredGrid.h>
 #include <vtkStaticCellLocator.h>
@@ -428,5 +429,90 @@ if treat regular cartesian grid as a grid of uniform spacing
 */
 
 // *************************************** Rewrite everything with vector
+
+class NeuralCurvilinearGrid: public CurvilinearGrid {
+
+  public:
+    torch::jit::script::Module network;
+    std::vector<std::vector<glm::vec3>> compRays;
+
+    NeuralCurvilinearGrid() {}
+    NeuralCurvilinearGrid(const std::string & modulePath) {
+      network = torch::jit::load(modulePath);
+    }
+
+
+    std::vector<float> flattenVectorGLM(std::vector<std::vector<glm::vec3>> physRays) {
+      std::vector<float> raysSTL;
+      for (int i = 0; i < physRays.size(); i++) {
+        std::vector<float> raySTL(physRays[i].size()*3);
+        // flatten a vector of vec3
+        for (int j = 0; j < physRays[i].size(); j++) {
+          raySTL[j*3] = physRays[i][j].x;
+          raySTL[j*3+1] = physRays[i][j].y;
+          raySTL[j*3+2] = physRays[i][j].z;
+        }
+        raysSTL.insert(std::end(raysSTL), std::begin(raySTL), std::end(raySTL));
+      }
+      return raysSTL;
+    }
+
+    std::vector<std::vector<glm::vec3>> raysTensorToVectorGLM(torch::Tensor rays) {
+      int shape[3] = {(int)rays.sizes()[0], (int)rays.sizes()[1], (int)rays.sizes()[2]};
+
+      std::vector<std::vector<glm::vec3>> raysSTL;
+      raysSTL.resize(shape[0]);
+      for (int i = 0; i < shape[0]; i++) {
+        std::vector<glm::vec3> raySTL;
+        raySTL.resize(shape[1]);
+        for (int j = 0; j < shape[1]; j++) {
+          glm::vec3 coord(
+            rays[i][j][0].item<float>(),
+            rays[i][j][1].item<float>(),
+            rays[i][j][2].item<float>()
+          );
+          raySTL[j] = coord;
+        }
+        raysSTL[i] = raySTL;
+      }
+      return raysSTL;
+    }
+
+    // precompute
+    std::vector<std::vector<glm::vec3>> precomputeRayCompCoords(std::vector<std::vector<glm::vec3>> physRays) {
+      std::vector<float> raysSTL = flattenVectorGLM(physRays);
+      torch::Tensor physRaysTensor = torch::tensor(raysSTL);
+      physRaysTensor = physRaysTensor.reshape({-1, 3});
+      std::cout << physRaysTensor.sizes() << "\n";
+      std::vector<torch::jit::IValue> inputs;
+      inputs.push_back(physRaysTensor);
+      torch::Tensor compRaysTensor;
+      {
+        torch::NoGradGuard no_grad;
+        compRaysTensor = this->network.forward(inputs).toTensor();
+      }
+
+
+
+      int dims[3] = {(int)physRays.size(), (int)physRays[0].size(), 3};
+      compRaysTensor = compRaysTensor.reshape({dims[0], dims[1], dims[2]});
+      std::cout << compRaysTensor.sizes() << "\n";
+      return raysTensorToVectorGLM(compRaysTensor);
+    }
+
+    // virtual CellLerp getVoxelLerp(float x, float y, float z) {
+    //   // assert(this->isBounded(x,y,z));
+    //   // 2. find comp
+    //   // newton's method
+    //   Array3f phys{ x, y, z };
+    //   Array3f comp = this->phys2comp_newtwon(
+    //     phys, voxelCoords, this->newton.maxiter, this->newton.atol, this->newton.rtol
+    //   );
+    //   std::vector<float> weights = { comp(0), comp(1), comp(2) };
+    //   std::vector<int> ijk = vtkGetIJK(cornerPID);
+    //   // 3. trilinear interpolate in comp grid
+    //   return CellLerp{ ijk, weights };
+    // }
+};
 
 #endif
