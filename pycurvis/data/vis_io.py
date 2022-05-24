@@ -161,6 +161,7 @@ def get_vtp_polyline(sl_coords: np.array, sllens: np.array):
     vtkCells.InsertNextCell(polyLine)
   vtp.SetLines(vtkCells)
 
+
 def write_vtp(fpath, vtp):
   writer = vtk.vtkXMLPolyDataWriter()
   writer.SetFileName(fpath)

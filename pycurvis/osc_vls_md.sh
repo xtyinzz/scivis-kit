@@ -18,7 +18,7 @@ module load miniconda3
 source activate vis
 
 # execute job
-srun python train.py --nncfg=nn_vls_md.yaml
+srun python train.py --nncfg=nn_vls_md.yaml --resume
 # srun python train_block.py --nncfg=nn_block_half.yaml --resume
 # python test.py --testcfg=cfg/nntest_curv.yaml
 # python mem.py

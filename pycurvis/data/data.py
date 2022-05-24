@@ -189,6 +189,46 @@ class Pipeline1D(Pipeline):
     X = super()._inverse_transform(X)
     return X.reshape(x_shape)
 
+class VLSThetaDataset(Dataset):
+  def __init__(self, data_path, intrans=fitTransPipeline, outtrans=fitTransPipeline):
+    self.data_path = data_path
+    vtkSGR = vtk.vtkXMLStructuredGridReader()
+    vtkSGR.SetFileName(data_path)
+    vtkSGR.Update()
+    vtkSG = vtkSGR.GetOutput()
+    # get dimension and swap xyz order to zyx
+    self.dims = np.array(vtkSG.GetDimensions())
+    tmp = self.dims[0]
+    self.dims[0] = self.dims[2]
+    self.dims[2] = tmp
+    # get phys mesh
+    self.phys = numpy_support.vtk_to_numpy(vtkSG.GetPoints().GetData())
+    # get comp mesh - regular grid
+    self.phys = self.phys.reshape([*self.dims, 3])
+    # preprocessing
+    self.phys_prep = torch.Tensor(self.phys.reshape(-1, 3))
+
+    self.theta = numpy_support.vtk_to_numpy(vtkSG.GetPointData().GetArray(0))
+    self.theta = self.theta.reshape([*self.dims, 1])
+    self.theta_prep = torch.Tensor(self.phys.reshape(-1, 3))
+
+    if intrans is not None:
+      print("transforming inputs")
+      self.phys_prep, self.inpp = fitTransPipeline(self.phys.reshape(-1, 3))
+      self.phys_prep = torch.Tensor(self.phys_prep)
+    
+    if outtrans is not None:
+      print("transforming outputs")
+      self.theta_prep, self.outpp = fitTransPipeline(self.theta.reshape(-1, 1))
+      self.theta_prep = torch.Tensor(self.theta_prep)
+
+  def __len__(self):
+    return len(self.phys_prep)
+
+  def __getitem__(self, idx):
+    return self.phys_prep[idx], self.theta_prep[idx]
+
+
 class Phys2CompDataset(Dataset):
   def __init__(self, data_path, intrans=fitTransPipeline, outtrans=None):
     self.data_path = data_path

@@ -14,10 +14,10 @@ model: {
   param: {
     in_dim: 3,
     hidden_dims: [48, 48, 48, 48],
-    out_dim: 3,
+    out_dim: 1,
     pe_dim: 16,
   },
-  log_dir: 'log/vls_mlp_md',
+  log_dir: 'log/vls_mlp_imp',
 }
 
 # VBH Grid.npy features:
@@ -27,7 +27,7 @@ model: {
 # x1x2x3: regular grid alike
 
 dataset: {
-  type: 'vls_2022',
+  type: 'vls_theta_2022',
   param: {
     data_path: "data/bc80-45000-down.vts"
   },
@@ -53,8 +53,8 @@ train: {
   # batch_log_step: step between batch number to save model
   batch_log_step: 50,
   # log_step: step between epoch number to save model
-  log_step: 100,
+  log_step: 50,
   resume: {
-    ckpt: ckpt_3299_-001_1.92e-05,
+    ckpt: 0,
   }
 }
