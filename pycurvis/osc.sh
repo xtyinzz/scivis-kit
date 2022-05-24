@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-#SBATCH --job-name=cat2sph-attn_net-10000epoch-single_block
-#SBATCH --output="log/osc/attn_net_single_block_job%j.out"
+#SBATCH --job-name=vls_phys2comp_res
+#SBATCH --output="log/osc/val_res%j.out"
 #SBATCH --signal=USR1@20
 #
 #SBATCH --nodes=1 --ntasks-per-node=1 --gpus-per-node=1
-#SBATCH --time=5:59:00
+#SBATCH --time=14:59:00
 #
 #SBATCH --account=PAS0027
 
@@ -18,7 +18,7 @@ module load miniconda3
 source activate vis
 
 # execute job
-srun python train.py --nncfg=nn_single_block_attn.yaml --resume
+srun python train.py --nncfg=nn_vls_res.yaml
 # srun python train_block.py --nncfg=nn_block_half.yaml --resume
 # python test.py --testcfg=cfg/nntest_curv.yaml
 # python mem.py

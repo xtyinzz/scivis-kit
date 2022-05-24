@@ -246,9 +246,9 @@ class Phys2CompDataset(Dataset):
     # get comp mesh - regular grid
     self.phys = self.phys.reshape([*self.dims, 3])
     z,y,x = np.meshgrid(
-      np.linspace(0, 1, self.dims[0]),
-      np.linspace(0, 1, self.dims[1]),
-      np.linspace(0, 1, self.dims[2]),
+      np.linspace(-1, 1, self.dims[0]),
+      np.linspace(-1, 1, self.dims[1]),
+      np.linspace(-1, 1, self.dims[2]),
       indexing="ij"
     )
     self.comp = np.concatenate([z[...,None], y[...,None], x[...,None]], axis=-1)

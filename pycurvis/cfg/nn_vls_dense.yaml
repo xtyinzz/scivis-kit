@@ -1,7 +1,7 @@
 optim: {
   type: 'AdamW',
   param: {
-    lr: 0.001
+    lr: 0.0001
   }
 }
 
@@ -10,14 +10,17 @@ scheduler: {
 }
 
 model: {
-  type: 'mlp_pe',
+  type: 'mlp_pe_dense',
   param: {
     in_dim: 3,
-    hidden_dims: [32, 64, 128, 128, 64, 32],
+    dense_dim: 256,
+    dense_block_size: 3,
+    num_block: 2,
     out_dim: 3,
     pe_dim: 20,
+    final_act: "tanh",
   },
-  log_dir: 'log/vls_mlp_lg',
+  log_dir: 'log/vls_mlp_dense',
 }
 
 # VBH Grid.npy features:

@@ -1,7 +1,10 @@
-from turtle import forward
+from typing_extensions import final
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from util.utils import report_gpumem, cpuStats
+
 
 class PositionalEncoding(nn.Module):
   def __init__(self, emb_dim=64):
@@ -21,6 +24,23 @@ class PositionalEncoding(nn.Module):
     x_pe = torch.concat([s,c], dim=-1) # (b, n, c, emb_dim)
     x_pe = x_pe.view(*x.shape[:-1], -1) # (b, n, c*emb_dim)
     return x_pe
+
+class DenseBlock(nn.Module):
+  def __init__(self, in_dim, hidden_dim, hidden_layers,
+               act_fn=nn.ReLU(), use_norm=False):
+    super(DenseBlock, self).__init__()
+    self.net = [LinearLayer(in_dim, hidden_dim, act_fn, use_norm)]
+    for i in range(hidden_layers):
+      self.net.append(LinearLayer(hidden_dim,hidden_dim,act_fn,use_norm))
+    self.net = nn.ModuleList(self.net)
+    
+  def forward(self, x):
+    x = self.net[0](x)
+    xs = [x]
+    for layer in self.net[1:]:
+      x = layer(x) + sum(xs)
+      xs.append(x)
+    return x
 
 class LinearLayer(nn.Module):
   def __init__(self, in_dim, out_dim=256, act_fn=nn.ReLU(), use_norm=False) -> None:
@@ -77,14 +97,15 @@ class MLP(nn.Module):
 
 # Fourrier Feature Network: PE+MLP
 class ResMLP(nn.Module):
-  def __init__(self, in_dim, hidden_dims, out_dim, pe_dim=64):
+  def __init__(self, in_dim, hidden_dims, out_dim, pe_dim=20,
+               final_act=None):
     super(ResMLP, self).__init__()
-    self.use_pe = pe_dim is not None
     self.net = nn.ModuleList([])
 
-    self.pe = PositionalEncoding(hidden_dims[0] // in_dim)
+    self.pe = None
     if pe_dim is not None:
-      in_dim = hidden_dims[0]
+      self.pe = PositionalEncoding(pe_dim)
+      in_dim = pe_dim*in_dim
 
     # intermediate layers
     hidden_dims.insert(0, in_dim)
@@ -93,17 +114,47 @@ class ResMLP(nn.Module):
         LinearLayer(hidden_dims[i], hidden_dims[i+1], use_norm=True)
       )
     # final layer with Tanh
-    self.final = LinearLayer(hidden_dims[-1], out_dim, act_fn=None)
+    final_act_fn = None
+    if final_act == "tanh":
+      final_act_fn = nn.Tanh()
+    self.final = LinearLayer(hidden_dims[-1], out_dim, act_fn=final_act_fn)
 
   def forward(self, x):
-    if self.use_pe:
+    if self.pe is not None:
       x = self.pe(x)
-    
-    for layer in self.net:
+      
+    x = self.net[0](x)
+    for layer in self.net[1:]:
       x = x + layer(x)
 
     return self.final(x)
 
+class DenseMLP(nn.Module):
+  def __init__(self, in_dim, out_dim, dense_dim=256, dense_block_size=3, num_block=2,
+               act_fn=nn.ReLU(), use_norm=True, pe_dim=20,
+               final_act=None):
+    super(DenseMLP, self).__init__()
+    # pos enc
+    self.pe = None
+    if pe_dim is not None:
+      self.pe = PositionalEncoding(pe_dim)
+      in_dim = pe_dim*in_dim
+    # dense blocks
+    self.net = [LinearLayer(in_dim, dense_dim, act_fn, use_norm)]
+    for i in range(num_block):
+      self.net.append(DenseBlock(dense_dim, dense_dim, dense_block_size, act_fn, use_norm))    
+    # output
+    final_act_fn = None
+    if final_act == "tanh":
+      final_act_fn = nn.Tanh()
+    self.net.append(LinearLayer(dense_dim, out_dim, final_act_fn, use_norm=False))
+    self.net = nn.Sequential(*self.net)
+    
+  def forward(self, x):
+    if self.pe is not None:
+      x = self.pe(x)
+    return self.net(x)
+  
 # Feed Forward Network in Transformer Encoder
 class FFN(nn.Module):
   def __init__(self, embed_dim, ff_dim, act_fn, dropout=0.):
@@ -155,10 +206,16 @@ class TransformerBlock(nn.Module):
 
 class AttentionNetwork(nn.Module):
   def __init__(self, in_dim, out_dim, embed_dim, num_blocks, num_heads,
-               ff_dim, dropout=0., act_fn=nn.ReLU(),
+               ff_dim, dropout=0., act_fn=nn.ReLU(), pe_dim=None,
                transpose=False):
     super(AttentionNetwork, self).__init__()
-    self.in_proj = LinearLayer(in_dim, embed_dim, act_fn=None, use_norm=False)
+    self.in_proj = []
+    if pe_dim is not None:
+      self.in_proj.append(PositionalEncoding(pe_dim))
+      in_dim = pe_dim*in_dim
+    self.in_proj.append(LinearLayer(in_dim, embed_dim, act_fn=nn.LeakyReLU(), use_norm=True))
+    self.in_proj = nn.Sequential(*self.in_proj)
+    
     self.attn_blocks = nn.ModuleList([])
     for i in range(num_blocks):
       self.attn_blocks.append(
@@ -228,7 +285,8 @@ class SineLayer(nn.Module):
 # Source: https://github.com/vsitzmann/siren/blob/master/explore_siren.ipynb
 #
 class Siren(nn.Module):
-  def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=True, 
+  def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=True,
+               final_act=None, 
               first_omega_0=30, hidden_omega_0=30.):
     super().__init__()
 
@@ -252,9 +310,12 @@ class Siren(nn.Module):
       self.net.append(SineLayer(hidden_features, out_features, 
                                 is_first=False, omega_0=hidden_omega_0))
     
+    if final_act is 'tanh':
+      self.net.append(nn.Tanh())
+      
     self.net = nn.Sequential(*self.net)
 
   def forward(self, coords):
     coords = coords.clone().detach().requires_grad_(True) # allows to take derivative w.r.t. input
     output = self.net(coords)
-    return output, coords
+    return output

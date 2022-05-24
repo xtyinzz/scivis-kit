@@ -2,7 +2,7 @@ import os
 import torch
 import yaml
 from data.data import VBHGridDataset, SphericalDataset, SphericalBlockDataset, Phys2CompDataset, VLSThetaDataset
-from network.network import MLP, AttentionNetwork, ResMLP, Siren
+from network.network import *
 # parse config files; reuse for your own project
 class Config():
   '''
@@ -105,6 +105,8 @@ class Config():
       model = MLP(**param)
     elif 'mlp_pe_res' == name:
       model = ResMLP(**param)
+    elif 'mlp_pe_dense' == name:
+      model = DenseMLP(**param)
     elif 'attn_net' == name:
       model = AttentionNetwork(**param)
     return model

@@ -140,7 +140,7 @@ def main():
   optim = config.get_optim(model)
   lossl1 = nn.L1Loss()
   lossl2 = nn.MSELoss()
-  lossfn = lossl2
+  lossfn = lossl1
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   model.to(device)
@@ -165,8 +165,6 @@ def main():
   print_train_loss = 0
   print_step = batch_log_step // 5
   for epoch in range(start_epoch, max_epoch):
-
-
     # train
     # eloss = 0
     for bi, data in enumerate(train_loader):
