@@ -435,12 +435,22 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
   public:
     torch::jit::script::Module network;
     std::vector<std::vector<glm::vec3>> compRays;
+    float mean, std, max, min;
 
     NeuralCurvilinearGrid() {}
     NeuralCurvilinearGrid(const std::string & modulePath) {
       network = torch::jit::load(modulePath);
     }
 
+    void setDataSTDParam(float mean, float std) {
+      this->mean = mean;
+      this->std = std;
+    }
+
+    void setDataNormParam(float min, float max) {
+      this->min = min;
+      this->max = max;
+    }
 
     std::vector<float> flattenVectorGLM(std::vector<std::vector<glm::vec3>> physRays) {
       std::vector<float> raysSTL;
@@ -483,6 +493,8 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
       std::vector<float> raysSTL = flattenVectorGLM(physRays);
       torch::Tensor physRaysTensor = torch::tensor(raysSTL);
       physRaysTensor = physRaysTensor.reshape({-1, 3});
+      physRaysTensor = (physRaysTensor - physRaysTensor.mean()) / physRaysTensor.std();
+      physRaysTensor = (physRaysTensor - physRaysTensor.min()) / (physRaysTensor.max() - physRaysTensor.min());
       std::cout << physRaysTensor.sizes() << "\n";
       std::vector<torch::jit::IValue> inputs;
       inputs.push_back(physRaysTensor);

@@ -82,13 +82,13 @@ int main(int argc, char *argv[]) {
   vr.setImageDimension(imgWidth, imgWidth);
 
 
-  std::string networkPath = "pytorch/traced_2499_1.pt";
+  std::string networkPath = "pytorch/traced_7300_1.pt";
   NeuralCurvilinearGrid neuralCG(networkPath);
 
   std::vector<std::vector<int>> planeIndices{
-    {0, 1}
-    // {1, 2},
-    // {0, 2}
+    {0, 1},
+    {1, 2},
+    {0, 2}
   };
 
   for (const std::vector<int> &planeIdx : planeIndices) {
@@ -106,6 +106,9 @@ int main(int argc, char *argv[]) {
     float steplen = depth / numSteps;
     rayStep[depthPlaneIdx] = steplen;
     // numSteps = std::atoi(argv[2]);
+
+
+
 
     std::cout << "W/H/Depth: " << imgWidth << "/" << imgWidth << "/" << numSteps << "\n";
     std::vector<std::vector<glm::vec3>> physRays = vr.getRays(rayStep, numSteps, planeIdx);
