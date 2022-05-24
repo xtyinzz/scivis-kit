@@ -1,7 +1,7 @@
 import os
 import torch
 import yaml
-from data.data import VBHGridDataset, SphericalDataset, SphericalBlockDataset, Phys2CompDataset
+from data.data import VBHGridDataset, SphericalDataset, SphericalBlockDataset, Phys2CompDataset, VLSThetaDataset
 from network.network import MLP, AttentionNetwork, ResMLP, Siren
 # parse config files; reuse for your own project
 class Config():
@@ -51,6 +51,8 @@ class Config():
       dataset = SphericalBlockDataset(**param)
     elif name == "vls_2022":
       dataset = Phys2CompDataset(**param)
+    elif name == "vls_theta_2022":
+      dataset = VLSThetaDataset(**param)
     return dataset
   
   def get_optim(self, model):
