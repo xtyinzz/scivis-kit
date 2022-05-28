@@ -184,7 +184,7 @@ def main():
       # eloss += loss.item()
       ckpt_train_loss += loss.item()
       print_train_loss += loss.item()
-      
+    #   report_gpumem()
       # report intermediate evaluations
       print_bi += 1
       if print_bi % print_step == 0:

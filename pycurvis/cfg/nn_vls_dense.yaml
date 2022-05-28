@@ -34,8 +34,8 @@ dataset: {
   param: {
     data_path: "data/bc80-45000-down.vts"
   },
-  train_split: 0.9,
-  valid_split: 0.1,
+  train_split: 0.95,
+  valid_split: 0.05,
 }
 
 # dataloader: {
@@ -51,13 +51,13 @@ dataset: {
 # 2^21: 2097152
 # 2^22: 4194304
 train: {
-  max_epoch: 10000,
+  max_epoch: 100000,
   batch: 524288,
   # batch_log_step: step between batch number to save model
   batch_log_step: 50,
   # log_step: step between epoch number to save model
-  log_step: 50,
+  log_step: 500,
   resume: {
-    ckpt: ckpt_0999_-001_8.29e-05,
+    ckpt: ckpt_72630_0130_4.74e-03,
   }
 }
