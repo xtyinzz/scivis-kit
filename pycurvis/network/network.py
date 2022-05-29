@@ -63,7 +63,7 @@ class MLP(nn.Module):
   if pe_dim = 0:
     pe_dim = 1st hidden_dim
   '''
-  def __init__(self, in_dim, hidden_dims, out_dim, pe_dim=0):
+  def __init__(self, in_dim, hidden_dims, out_dim, pe_dim=0, final_act=None):
     super(MLP, self).__init__()
     self.net = nn.ModuleList([])
 
@@ -81,8 +81,13 @@ class MLP(nn.Module):
         LinearLayer(hidden_dims[i-1], hidden_dims[i], use_norm=True)
       )
     # final layer with Tanh
+    final_act_fn = None
+    if final_act == "tanh":
+      final_act_fn = nn.Tanh()
+    elif final_act == "sigmoid":
+      final_act_fn = nn.Sigmoid()
     self.net.append(
-      LinearLayer(hidden_dims[-1], out_dim, act_fn=nn.Sigmoid())
+      LinearLayer(hidden_dims[-1], out_dim, act_fn=final_act_fn)
     )
     
     self.net = nn.Sequential(*self.net)
