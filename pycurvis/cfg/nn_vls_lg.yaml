@@ -15,7 +15,7 @@ model: {
     in_dim: 3,
     hidden_dims: [32, 64, 128, 128, 64, 32],
     out_dim: 3,
-    pe_dim: 20,
+    pe_dim: 16,
   },
   log_dir: 'log/vls_mlp_lg',
 }
