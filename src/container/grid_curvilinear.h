@@ -7,6 +7,7 @@
 #include "solution.h"
 #include "common/numerical.h"
 #include "common/util.h"
+#include "common/io.h"
 #include <assert.h>
 #include <iostream>
 #include <string>
@@ -265,6 +266,7 @@ class CurvilinearGrid: public GridBase {
     }
 
     Matrix3f getJacInvComp2Phys(Array3f comp, std::vector<Array3f> coeff) {
+      // NEED TO NORMALIZE COMP TO WITHIN A CELL OF [0, 1]! NEED minCoord and maxCoord of the cell
       Matrix3f jac = this->getJacComp2Phys(comp, coeff);
       float det = (-jac(0, 0)*jac(1, 1)*jac(2, 2) - jac(0, 1)*jac(1, 2)*jac(2, 0) - jac(0, 2)*jac(1, 0)*jac(2, 1) + 
                     jac(0, 2)*jac(1, 1)*jac(2, 0) + jac(0, 1)*jac(1, 0)*jac(2, 2) + jac(0, 0)*jac(1, 2)*jac(2, 1));
@@ -439,7 +441,10 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
 
     NeuralCurvilinearGrid() {}
     NeuralCurvilinearGrid(const std::string & modulePath) {
+    std::cout <<  "Numbe: \n";
       network = torch::jit::load(modulePath);
+    std::cout <<  "Numbe: \n";
+
     }
 
     void setDataSTDParam(float mean, float std) {
@@ -490,34 +495,23 @@ class NeuralCurvilinearGrid: public CurvilinearGrid {
 
     // precompute
     std::vector<std::vector<glm::vec3>> precomputeRayCompCoords(std::vector<std::vector<glm::vec3>> physRays) {
+      std::vector<float> stats = readFloats("pytorch/stats.bin");
+
+      float mean = stats[0], scale = stats[1], dmin = stats[2], dmax = stats[3];
+      std::cout << mean << " " << scale << " " << dmin << " " << dmax << "\n";
       std::vector<float> raysSTL = flattenVectorGLM(physRays);
       torch::Tensor physRaysTensor = torch::tensor(raysSTL);
       physRaysTensor = physRaysTensor.reshape({-1, 3});
-      physRaysTensor = (physRaysTensor - physRaysTensor.mean()) / physRaysTensor.std();
-      physRaysTensor = (physRaysTensor - physRaysTensor.min()) / (physRaysTensor.max() - physRaysTensor.min());
+      physRaysTensor = (physRaysTensor - mean) / scale;
+      physRaysTensor = (physRaysTensor - dmin) / (dmax - dmin);
       std::cout << physRaysTensor.sizes() << "\n";
       std::vector<torch::jit::IValue> inputs;
       inputs.push_back(physRaysTensor);
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
       torch::Tensor compRaysTensor;
       {
         torch::NoGradGuard no_grad;
         compRaysTensor = this->network.forward(inputs).toTensor();
       }
-
-
-=======
-      torch::Tensor compRaysTensor = this->network.forward(inputs).toTensor();
->>>>>>> Stashed changes
-=======
-      torch::Tensor compRaysTensor = this->network.forward(inputs).toTensor();
->>>>>>> Stashed changes
-=======
-      torch::Tensor compRaysTensor = this->network.forward(inputs).toTensor();
->>>>>>> Stashed changes
-
       int dims[3] = {(int)physRays.size(), (int)physRays[0].size(), 3};
       compRaysTensor = compRaysTensor.reshape({dims[0], dims[1], dims[2]});
       std::cout << compRaysTensor.sizes() << "\n";

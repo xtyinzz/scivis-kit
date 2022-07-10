@@ -238,7 +238,7 @@ class VolumeRenderer {
           for (int depth = 0; depth < numSteps; depth++) {
             glm::vec3 ray = rays[rayIdx][depth];
             // get current value, rgba
-            // if (!this->field->isBounded(ray.x, ray.y, ray.z)) break;
+            if (!this->field->isBounded(ray.x, ray.y, ray.z)) continue;
             float intensity = this->field->getVal(ray.x, ray.y, ray.z);
             // std::cout << intensity << "\n";
             glm::vec3 rgb(0);
@@ -279,24 +279,43 @@ class VolumeRenderer {
       printVec(lastRay[lastRay.size()-1]);
     }
 
-    std::vector<std::vector<glm::vec3>> getRays(glm::vec3 rayStep, int numDepths, std::vector<int> planeIdx) {
-      std::vector<std::vector<float>> fieldExtents{
-        this->field->getDimExtent(0),
-        this->field->getDimExtent(1),
-        this->field->getDimExtent(2),
-      };
+    std::vector<std::vector<glm::vec3>> getRays(int numDepths, std::vector<int> planeIdx, double* fieldExtents) {
+      // std::vector<std::vector<float>> fieldExtents{
+      //   this->field->getDimExtent(0),
+      //   this->field->getDimExtent(1),
+      //   this->field->getDimExtent(2),
+      // };
+      fieldExtents[0] = 200;
+      fieldExtents[1] = 275;
+      fieldExtents[2] = -150;
+      fieldExtents[3] = 100;
+      fieldExtents[4] = 1;
+      fieldExtents[5] = 100;
+      int depthPlaneIdx = 3 - planeIdx[0] - planeIdx[1];
+      float depth = fieldExtents[2*depthPlaneIdx + 1] - fieldExtents[2*depthPlaneIdx];
 
-      float ustep = (fieldExtents[planeIdx[0]][1] - fieldExtents[planeIdx[0]][0]) / (img.getWidth()-1);
-      float vstep = (fieldExtents[planeIdx[1]][1] - fieldExtents[planeIdx[1]][0]) / (img.getHeight()-1);
+      float ulen = fieldExtents[planeIdx[0]*2 + 1] - fieldExtents[planeIdx[0]*2];
+      float vlen = fieldExtents[planeIdx[1]*2 + 1] - fieldExtents[planeIdx[1]*2];
+      float ustep = ulen / (img.getWidth()-1);
+      float vstep = vlen / (img.getHeight()-1);
 
-      float xmin = fieldExtents[0][0];
-      float ymin = fieldExtents[1][0];
-      float zmin = fieldExtents[2][0];
+      float xmin = fieldExtents[0];
+      float ymin = fieldExtents[2];
+      float zmin = fieldExtents[4];
       glm::vec3 rayCorner(xmin,ymin,zmin);
+
+      glm::vec3 rayStep(0.f);
+      float steplen = depth / numDepths;
+      rayStep[depthPlaneIdx] = steplen;
+
       // for every pixel/ray
       int imgW = this->img.getWidth();
       int imgH = this->img.getHeight();
-
+      std::cout << "W/H/Depth: " << imgW << "/" << imgH << "/" << numDepths << "\n";
+      std::cout << "Generating rays from: ";
+      printVec(rayCorner);
+      std::cout << "step vector: ";
+      printVec(rayStep);
       std::vector<std::vector<glm::vec3>> raysSTL(imgW*imgH);
       for (size_t u=0; u < imgW; u++) {
         for (size_t v=0; v < imgH; v++) {
@@ -312,8 +331,12 @@ class VolumeRenderer {
           raysSTL[rayIdx] = raySTL;
         }
       }
+      glm::vec3 ray(rayCorner);
+      ray[planeIdx[0]] += (this->img.getWidth()-1)*ustep;
+      ray[planeIdx[1]] += (this->img.getHeight()-1)*vstep;
+      std::cout << "ray ends at corner";
+      printVec(ray);
       return raysSTL;
-
     }
 
     // camera model?

@@ -52,8 +52,8 @@ if(VTK_FOUND)
   )
 endif()
 
-target_include_directories(scivis PUBLIC "$ENV{NETCDF}/include")
-target_link_libraries(scivis PUBLIC $ENV{NETCDF_LIBS})
+# target_include_directories(scivis PUBLIC "$ENV{NETCDF}/include")
+# target_link_libraries(scivis PUBLIC $ENV{NETCDF_LIBS})
 
 # target_link_libraries(scivis INTERFACE ${SRC_DIRS})
 # target_include_directories(scivis INTERFACE ${SRC_DIRS})

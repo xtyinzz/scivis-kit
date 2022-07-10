@@ -19,6 +19,18 @@ using namespace Eigen;
 //   x1 y1 z1
 //   x2 y2 z2
 //   ...
+
+std::vector<float> readFloats(const std::string &fpath) {
+  std::ifstream fdata(fpath, std::ios::binary);
+  int count;
+  fdata.read(reinterpret_cast<char*>(&count), sizeof(int));
+
+  std::vector<float> floats(count);
+  fdata.read(reinterpret_cast<char*>(floats.data()), sizeof(float)*count);
+
+  return floats;
+}
+
 Solution<Vector3f> readVec(const std::string &fpath, bool verbose=true) {
   Solution<Vector3f> data;
   data.fromVec(fpath, verbose);

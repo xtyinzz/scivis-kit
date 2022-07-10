@@ -10,6 +10,8 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.pipeline import Pipeline
 import vtk
 from vtkmodules.util import numpy_support
+from scipy.interpolate import RegularGridInterpolator
+
 
 def minmax_scale(x, new_min=-1., new_max=1.):
   x_max, x_min = [x.max(1, keepdim=True)[0], x.min(1, keepdim=True)[0]]
@@ -230,7 +232,7 @@ class VLSThetaDataset(Dataset):
 
 
 class Phys2CompDataset(Dataset):
-  def __init__(self, data_path, intrans=fitTransPipeline, outtrans=None):
+  def __init__(self, data_path, intrans=fitTransPipeline, outtrans=None, dims_aug=None):
     self.data_path = data_path
     vtkSGR = vtk.vtkXMLStructuredGridReader()
     vtkSGR.SetFileName(data_path)
@@ -245,10 +247,28 @@ class Phys2CompDataset(Dataset):
     self.phys = numpy_support.vtk_to_numpy(vtkSG.GetPoints().GetData())
     # get comp mesh - regular grid
     self.phys = self.phys.reshape([*self.dims, 3])
+    self.dims_aug = self.dims
+    print("Original Phys2Comp dataset dimension:", self.dims_aug)
+    if dims_aug is not None:
+      self.dims_aug = dims_aug
+      physField = RegularGridInterpolator(
+        (np.arange(self.dims[0]), np.arange(self.dims[1]), np.arange(self.dims[2])),
+        self.phys
+      )
+      sample_points = np.meshgrid(
+        np.linspace(0, self.dims[0]-1, self.dims_aug[0]),
+        np.linspace(0, self.dims[1]-1, self.dims_aug[1]),
+        np.linspace(0, self.dims[2]-1, self.dims_aug[2]),
+        indexing='ij'
+      )
+      sample_points = np.stack(sample_points, -1)
+      self.phys = physField(sample_points)
+    print("Augmented Phys2Comp dataset dimension:", self.dims_aug)
+
     z,y,x = np.meshgrid(
-      np.linspace(-1, 1, self.dims[0]),
-      np.linspace(-1, 1, self.dims[1]),
-      np.linspace(-1, 1, self.dims[2]),
+      np.linspace(-1, 1, self.dims_aug[0]),
+      np.linspace(-1, 1, self.dims_aug[1]),
+      np.linspace(-1, 1, self.dims_aug[2]),
       indexing="ij"
     )
     self.comp = np.concatenate([z[...,None], y[...,None], x[...,None]], axis=-1)

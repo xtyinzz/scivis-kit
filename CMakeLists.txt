@@ -33,9 +33,6 @@ target_include_directories(STB INTERFACE "${PROJECT_SOURCE_DIR}/include")
 add_library(LINK_HEADER_LIBS INTERFACE)
 target_link_libraries(LINK_HEADER_LIBS INTERFACE Eigen GLM STB)
 
-
-
-
 # add_library(GLM INTERFACE)
 # target_include_directories(GLM INTERFACE "/usr/include")
 

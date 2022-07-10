@@ -5,8 +5,8 @@ project(lab3)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 # message(-status, ${PROJECT_SOURCE_DIR}, ${SRC_DIR}, ${INCLUDE_DIR})
 
-file(GLOB SOURCE_FILES "torchTest.cpp")
-set(SOURCE_FILES ${SOURCE_FILES} "render_neural.cpp" "render.cpp")
+file(GLOB SOURCE_FILES "*.cpp")
+# set(SOURCE_FILES ${SOURCE_FILES} "render_neural.cpp" "render.cpp")
 
 
 find_package(Torch REQUIRED HINTS "$ENV{HOME}/libs/libtorch")
@@ -18,14 +18,5 @@ foreach (test_file ${SOURCE_FILES})
   add_executable(${fname} ${test_file})
   target_link_libraries(${fname} scivis)
   target_link_libraries(${fname} ${TORCH_LIBRARIES})
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
   target_include_directories(${fname} INTERFACE ${TORCH_INCLUDE_DIRS})
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 endforeach (test_file)
